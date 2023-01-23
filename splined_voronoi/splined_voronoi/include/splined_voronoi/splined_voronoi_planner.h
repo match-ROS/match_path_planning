@@ -28,17 +28,57 @@ namespace splined_voronoi
 class SplinedVoronoiPlanner : public nav_core::BaseGlobalPlanner
 {
 public:
+    /**
+     * @brief Construct a new SplinedVoronoiPlanner object
+     *
+     */
     SplinedVoronoiPlanner();
+
+    /**
+     * @brief Construct a new Splined Voronoi Planner object
+     *
+     * @param name The name of this planner
+     * @param costmap_ros Costmap for obstacle avoidance
+     */
     SplinedVoronoiPlanner(std::string name, costmap_2d::Costmap2DROS* costmap_ros);
 
+    /**
+     * @brief Destructor the Splined Voronoi Planner object.
+     *
+     * Deletes all existing pointers.
+     */
     ~SplinedVoronoiPlanner();
 
-    /** overridden classes from interface nav_core::BaseGlobalPlanner **/
+    /**
+     * @brief Initialization function for the SplinedVoronoiPlanner.
+     *
+     * overrides class from interface nav_core::BaseGlobalPlanner
+     *
+     * @param name The name of this planner
+     * @param costmap_ros Costmap for obstacle avoidance
+     */
     void initialize(std::string name, costmap_2d::Costmap2DROS* costmap_ros);
 
+    /**
+     * @brief Compute Plan from given start and goal pose
+     *
+     * @param start Start Pose in map frame
+     * @param goal Goal Pose in map frame
+     * @param plan output plan
+     * @return true when plan is found;
+     * @return false otherwise
+     */
     bool makePlan(const geometry_msgs::PoseStamped& start, const geometry_msgs::PoseStamped& goal,
                   std::vector<geometry_msgs::PoseStamped>& plan);
 
+    /**
+     * @brief ROS-Service interface to compute a plan
+     *
+     * @param req Request as defined in navfn/MakeNavPlan.srv
+     * @param res Response as defined in navfn/MakeNavPlan.srv
+     * @return true if service call was successful;
+     * @return false otherwise
+     */
     bool makePlanService(navfn::MakeNavPlan::Request& req, navfn::MakeNavPlan::Response& res);
 
 
@@ -96,17 +136,19 @@ private:
 
     dynamic_reconfigure::Server<splined_voronoi::SplinedVoronoiPlannerConfig>* dsrv_;
 
+    /**
+     * @brief Callback for dynamic reconfigure
+     *
+     * @param config current configuration
+     * @param level level of change
+     */
     void reconfigureCB(splined_voronoi::SplinedVoronoiPlannerConfig &config, uint32_t level);
 
-    /** @brief convertes path to ros message type for plan. Fills in Orientation for each position.
-     *
-     */
-    void sparsePath(std::vector<cv::Point2i>& path, std::vector<cv::Point2i>& sparse_path);
 
     /** @brief publishes Plan for visualization with rviz; taken from https://github.com/frontw/voronoi_planner
      *
-     * @param which_path which publisher should be used: 0 -> original plan; 1 -> sparse plan; everything else ->
-     * final plan
+     * @param path the path to be published
+     * @param pub publisher to be used
      */
     void publishPlan(const std::vector<geometry_msgs::PoseStamped>& path, const ros::Publisher& pub);
 };

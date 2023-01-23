@@ -27,6 +27,10 @@ enum OptimizationStatus
 };
 }
 
+/**
+ * @brief container for data which is needed for optimization
+ *
+ */
 typedef struct {
     const std::vector<cv::Point2d>& points_orig;
     const std::vector<int>& optimize_indices;
@@ -46,12 +50,16 @@ typedef struct {
  *
  * @param sparse_path input sparse path which contains corner points for splines
  * @param path_out output path which should be continuous if input was correct
+ * @param optimized_sparse_path output sparse path which contains corner points for splines
+ * @param optimized_lengths output tangent lengths of spline for each connection point of spline
  * @param costmap costmap for transforming coordinates
  * @param obstacle_img binary image of obstacles in map
  * @param curve_max boulding value for curvature (1 / desired min radius)
  * @param path_resolution wanted resolution of output path in points per meter
+ * @param optimize_lengths if tangent lengths should be optimized; recommend true
+ * @param max_optimization_time maximum time for optimization in seconds; recommend 4.0
  * @return true if optimized continuous could be calculated;
- * @return false if not
+ * @return false otherwise
  */
 bool buildOptimizedContinuousPath(const std::vector<cv::Point2d>& sparse_path, std::vector<cv::Point2d>& path_out, std::vector<cv::Point2d>& optimized_sparse_path, std::vector<double>& optimized_lengths,
                                   const costmap_2d::Costmap2D& costmap, const cv::Mat& obstacle_img, double curve_max, double path_resolution, bool optimize_lengths, double max_optimization_time);
