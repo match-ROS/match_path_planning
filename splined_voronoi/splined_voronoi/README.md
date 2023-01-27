@@ -4,6 +4,12 @@ This Package contains a global path planner for multi robot formations based on 
 
 ## Installation
 
+Needs OpenCV:
+```bash
+sudo apt update
+sudo apt install libopencv-dev
+```
+
 Need tinyspline and nlopt built from source which are contained as git submodules
 
 ```bash
