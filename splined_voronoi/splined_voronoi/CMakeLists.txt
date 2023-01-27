@@ -33,6 +33,19 @@ find_package(NLopt)
 # # See http://ros.org/doc/api/catkin/html/user_guide/setup_dot_py.html
 # catkin_python_setup()
 
+
+add_service_files(
+  FILES
+  MakePlanWithStats.srv
+)
+
+generate_messages(
+  DEPENDENCIES
+  std_msgs
+  sensor_msgs
+  geometry_msgs
+)
+
 #add dynamic reconfigure api
 #find_package(catkin REQUIRED dynamic_reconfigure)
 generate_dynamic_reconfigure_options(

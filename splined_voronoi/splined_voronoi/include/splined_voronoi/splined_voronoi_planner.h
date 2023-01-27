@@ -21,6 +21,7 @@
 #include <splined_voronoi/path_planning.h>
 #include <splined_voronoi/path_smoothing.h>
 #include <splined_voronoi/SplinedVoronoiPlannerConfig.h>
+#include <splined_voronoi/MakePlanWithStats.h>
 
 namespace splined_voronoi
 {
@@ -81,6 +82,15 @@ public:
      */
     bool makePlanService(navfn::MakeNavPlan::Request& req, navfn::MakeNavPlan::Response& res);
 
+    /**
+     * @brief ROS-Service interface with more stats of planning
+     *
+     * @param req Request as defined in custom srv
+     * @param res Response as defined in custom srv
+     * @return true if service call was successful;
+     * @return false otherwise
+     */
+    bool makePlanWithStatsService(splined_voronoi::MakePlanWithStats::Request& req, splined_voronoi::MakePlanWithStats::Response& res);
 
     /**
      * @brief Requests the planner to cancel, e.g. if it takes too much time.
@@ -109,6 +119,7 @@ private:
     std::vector<std::pair<double, double>> robot_formation_;
     boost::mutex mutex_;
     ros::ServiceServer make_plan_service_;
+    ros::ServiceServer make_plan_with_stats_service_;
     ros::Publisher plan_pub_;
     ros::Publisher original_plan_pub_;
     ros::Publisher sparse_plan_pub_;
@@ -131,7 +142,6 @@ private:
     std::vector<geometry_msgs::PoseStamped> sparse_path_;
     std::vector<geometry_msgs::PoseStamped> optimized_sparse_path_;
     std::vector<double> spline_tangent_lengths_;
-    std::vector<double> time_taken_by_task_;
     double time_taken_;
 
     dynamic_reconfigure::Server<splined_voronoi::SplinedVoronoiPlannerConfig>* dsrv_;

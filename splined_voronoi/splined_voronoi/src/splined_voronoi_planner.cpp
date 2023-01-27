@@ -108,6 +108,7 @@ void SplinedVoronoiPlanner::initialize(std::string name, costmap_2d::Costmap2DRO
         }
 
         this->make_plan_service_ = private_nh.advertiseService("make_plan", &SplinedVoronoiPlanner::makePlanService, this);
+        this->make_plan_with_stats_service_ = private_nh.advertiseService("make_plan_with_stats", &SplinedVoronoiPlanner::makePlanWithStatsService, this);
 
         this->dsrv_ = new dynamic_reconfigure::Server<splined_voronoi::SplinedVoronoiPlannerConfig>(ros::NodeHandle("~/" + name));
         dynamic_reconfigure::Server<splined_voronoi::SplinedVoronoiPlannerConfig>::CallbackType cb = boost::bind(&SplinedVoronoiPlanner::reconfigureCB, this, _1, _2);
@@ -140,6 +141,31 @@ bool SplinedVoronoiPlanner::cancel()
     ROS_ERROR("SplinedVoronoiPlanner CANCEL");
     // Returns false if not implemented. Returns true if implemented and cancel has been successful.
     return false;
+}
+
+
+bool SplinedVoronoiPlanner::makePlanWithStatsService(splined_voronoi::MakePlanWithStats::Request& req, splined_voronoi::MakePlanWithStats::Response& res)
+{
+    std::vector<geometry_msgs::PoseStamped> path;
+
+    req.start.header.frame_id = "map";
+    req.goal.header.frame_id = "map";
+    bool success = makePlan(req.start, req.goal, path);
+    if (success)
+    {
+        res.plan_found = 0;
+    }
+    else
+    {
+        res.plan_found = -1;
+    }
+    res.time_taken = this->time_taken_;
+    res.astar_path = this->astar_path_;
+    res.sparse_path = this->sparse_path_;
+    res.optimized_sparse_path = this->optimized_sparse_path_;
+    res.spline_tangent_lengths = this->spline_tangent_lengths_;
+    res.path = path;
+    return true;
 }
 
 bool SplinedVoronoiPlanner::makePlanService(navfn::MakeNavPlan::Request& req, navfn::MakeNavPlan::Response& res)
@@ -182,7 +208,6 @@ bool SplinedVoronoiPlanner::makePlan(const geometry_msgs::PoseStamped& start, co
     this->sparse_path_.clear();
     this->optimized_sparse_path_.clear();
     this->spline_tangent_lengths_.clear();
-    this->time_taken_by_task_.clear();
 
     std::string global_frame = costmap_global_frame_;
 

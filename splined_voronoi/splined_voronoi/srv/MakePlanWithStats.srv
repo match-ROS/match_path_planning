@@ -1,0 +1,11 @@
+geometry_msgs/PoseStamped start
+geometry_msgs/PoseStamped goal
+float64 max_curvature
+---
+int64 plan_found
+float64 time_taken
+geometry_msgs/PoseStamped[] astar_path
+geometry_msgs/PoseStamped[] sparse_path
+geometry_msgs/PoseStamped[] optimized_sparse_path
+float64[] spline_tangent_lengths
+geometry_msgs/PoseStamped[] path

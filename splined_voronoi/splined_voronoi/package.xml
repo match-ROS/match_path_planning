@@ -17,6 +17,8 @@
   <depend>nlopt</depend>
   <depend>move_base_flex</depend>
   <depend>dynamic_reconfigure</depend>
+  <build_depend>message_generation</build_depend>
+  <exec_depend>message_runtime</exec_depend>
   <export>
     <nav_core plugin="${prefix}/splined_voronoi_planner_plugin.xml" />
   </export>
