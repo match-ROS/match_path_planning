@@ -1,12 +1,6 @@
-[submodule "voronoi_planner/voronoi_planner"]
-	path = voronoi_planner/voronoi_planner
-	url = https://github.com/Sanoronas/voronoi_planner.git
-[submodule "voronoi_planner/voronoi_generation"]
-	path = voronoi_planner/voronoi_generation
-	url = https://github.com/Sanoronas/voronoi_generation
 [submodule "voronoi_planner/tinyspline"]
-	path = voronoi_planner/tinyspline
+	path = splined_voronoi/tinyspline
 	url = https://github.com/msteinbeck/tinyspline
 [submodule "voronoi_planner/nlopt"]
-	path = voronoi_planner/nlopt
+	path = splined_voronoi/nlopt
 	url = https://github.com/stevengj/nlopt

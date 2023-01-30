@@ -1,5 +1,5 @@
 git submodule update --init --recursive
-cd voronoi_planner/nlopt/
+cd splined_voronoi/nlopt/
 cmake ..
 make
 sudo make install
