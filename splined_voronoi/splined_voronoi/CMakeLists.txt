@@ -63,8 +63,8 @@ generate_dynamic_reconfigure_options(
 # # DEPENDS: system dependencies of this project that dependent projects also need
 catkin_package(
 
-  # INCLUDE_DIRS include
-  # LIBRARIES com
+  INCLUDE_DIRS include
+  LIBRARIES splined_voronoi
   # CATKIN_DEPENDS message_runtime
   CATKIN_DEPENDS roscpp rospy std_msgs dynamic_reconfigure
   # DEPENDS system_lib
@@ -80,14 +80,14 @@ include_directories(
 )
 
 
-add_library(splined_voronoi_planner src/splined_voronoi_planner.cpp src/path_planning src/path_smoothing src/voronoi_generation)
-target_link_libraries(splined_voronoi_planner
+add_library(splined_voronoi src/splined_voronoi_planner.cpp src/path_planning src/path_smoothing src/voronoi_generation)
+target_link_libraries(splined_voronoi
   ${catkin_LIBRARIES}
   ${OpenCV_LIBRARIES}
   ${TINYSPLINECXX_LIBRARIES}
   ${NLOPT_LIBRARIES}
 )
-add_dependencies(splined_voronoi_planner ${catkin_EXPORTED_TARGETS} ${PROJECT_NAME}_gencfg)
+add_dependencies(splined_voronoi ${catkin_EXPORTED_TARGETS} ${PROJECT_NAME}_gencfg)
 
 
 # ##########
