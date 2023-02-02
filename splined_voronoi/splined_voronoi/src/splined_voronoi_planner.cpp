@@ -276,10 +276,10 @@ bool SplinedVoronoiPlanner::makePlan(const geometry_msgs::PoseStamped& start, co
         }
     }
     // enlargen obstacles by formation radius
-    cv::Mat costmap_dist_img;
-    cv::distanceTransform(~costmap_img_orig, costmap_dist_img, cv::DIST_L2, 3, CV_8UC1);
+    // cv::Mat costmap_dist_img;
+    // cv::distanceTransform(~costmap_img_orig, costmap_dist_img, cv::DIST_L2, 3, CV_8UC1);
     cv::Mat costmap_img;
-    cv::threshold(costmap_dist_img, costmap_img, 1 / this->costmap_resolution_ / this->max_curvature_, 255, cv::THRESH_BINARY_INV);
+    cv::threshold(~costmap_img_orig, costmap_img, 1 / this->costmap_resolution_ / this->max_curvature_, 255, cv::THRESH_BINARY_INV);
     costmap_img.convertTo(costmap_img, CV_8UC1);
 
     this->obstacle_img_ = costmap_img;
@@ -321,7 +321,7 @@ bool SplinedVoronoiPlanner::makePlan(const geometry_msgs::PoseStamped& start, co
 
     // get areas with large freespaces and overly voronoi diagram with it
     cv::Mat costmap_large_spaces;
-    cv::threshold(costmap_dist_img, costmap_large_spaces, this->free_space_factor_  / this->costmap_resolution_ / this->max_curvature_, 255, cv::THRESH_BINARY);
+    cv::threshold(costmap_img_orig, costmap_large_spaces, this->free_space_factor_  / this->costmap_resolution_ / this->max_curvature_, 255, cv::THRESH_BINARY);
     costmap_large_spaces.convertTo(costmap_large_spaces, CV_8UC1);
     cv::bitwise_or(this->voronoi_img_, costmap_large_spaces, this->voronoi_img_);
 
