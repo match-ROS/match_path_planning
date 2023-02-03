@@ -123,6 +123,7 @@ private:
     ros::Publisher plan_pub_;
     ros::Publisher original_plan_pub_;
     ros::Publisher sparse_plan_pub_;
+    ros::Publisher spline_plan_initial_pub_;
     ros::Publisher optimized_plan_pub_;
     ros::Publisher optimized_lengths_pub_;
     ros::Publisher voronoi_map_pub_;

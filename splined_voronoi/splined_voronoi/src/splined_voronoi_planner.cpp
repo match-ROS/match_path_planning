@@ -105,6 +105,7 @@ void SplinedVoronoiPlanner::initialize(std::string name, costmap_2d::Costmap2DRO
         plan_pub_ = private_nh.advertise<nav_msgs::Path>("/voronoi_planner/formation_plan", 1);
         original_plan_pub_ = private_nh.advertise<nav_msgs::Path>("original_plan", 1);
         sparse_plan_pub_ = private_nh.advertise<nav_msgs::Path>("sparse_plan", 1);
+        spline_plan_initial_pub_ = private_nh.advertise<nav_msgs::Path>("spline_plan_initial", 1);
         optimized_plan_pub_ = private_nh.advertise<nav_msgs::Path>("optimized_plan", 1);
         optimized_lengths_pub_ = private_nh.advertise<std_msgs::Float64MultiArray>("optimized_lengths", 1);
         voronoi_map_pub_ = private_nh.advertise<nav_msgs::OccupancyGrid>("voronoi_map", 1);
@@ -412,6 +413,13 @@ bool SplinedVoronoiPlanner::makePlan(const geometry_msgs::PoseStamped& start, co
     std::chrono::steady_clock::time_point plan_creating_time = std::chrono::steady_clock::now();
     double plan_creating_duration = (std::chrono::duration_cast<std::chrono::microseconds>(plan_creating_time - path_finding_time).count()) / 1000000.0;
     ROS_INFO_STREAM("SplinedVoronoiPlanner: Time taken to create plan from path (s): " << plan_creating_duration);
+
+    std::vector<double> tangent_lengths;
+    std::vector<cv::Point2d> spline_samples_initial;
+    std::vector<geometry_msgs::PoseStamped> spline_plan_initial;
+    path_smoothing::getSplinePathSamples(sparse_path_world, tangent_lengths, spline_samples_initial, 0.02, 1);
+    path_planning::createPlanFromPath(spline_samples_initial, spline_plan_initial, this->costmap_global_frame_);
+    this->publishPlan(spline_plan_initial, this->spline_plan_initial_pub_);
 
     // build spline from waypoints and optimize to fulfil curvature limit
     std::vector<cv::Point2d> continuous_path;

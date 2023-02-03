@@ -65,4 +65,16 @@ bool buildOptimizedContinuousPath(const std::vector<cv::Point2d>& sparse_path, s
                                   const costmap_2d::Costmap2D& costmap, const cv::Mat& obstacle_img, double curve_max, double path_resolution, bool optimize_lengths, double max_optimization_time);
 
 
+/**
+ * @brief samples spline built from waypoints and tangent lengths.
+ *
+ * @param points input waypoints which contain corner points for spline
+ * @param lengths input tangent lengths at connection points of spline
+ * @param points_out output samples of spline
+ * @param sample_distance approximate distance between two consecutive samples
+ * @param default_length default tangent length if tangent length vector is empty
+*/
+void getSplinePathSamples(const std::vector<cv::Point2d>& points, std::vector<double>& lengths, std::vector<cv::Point2d>& points_out, double sample_distance, double default_length);
+
+
 }  // namespace path_smoothing
