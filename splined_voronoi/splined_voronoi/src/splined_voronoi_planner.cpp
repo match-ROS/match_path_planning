@@ -51,7 +51,7 @@ void SplinedVoronoiPlanner::initialize(std::string name, costmap_2d::Costmap2DRO
         private_nh.param("angle_threshold", angle_threshold_, M_PI_4 / 2);
         private_nh.param("min_distance_control_points", min_distance_control_points_m_, 0.0);
         private_nh.param("plan_resolution", plan_resolution_, 50.0);
-        private_nh.param("max_curvature", max_curvature_, 1.0);
+        private_nh.param("max_curvature", this->max_curvature_, -1.0);
         private_nh.param("curvature_safety_margin", curvature_safety_margin_, 0.05);
         private_nh.param("max_optimization_time", max_optimization_time_, 4.0);
         private_nh.param("free_space_factor", this->free_space_factor_, 4.0);
@@ -62,9 +62,12 @@ void SplinedVoronoiPlanner::initialize(std::string name, costmap_2d::Costmap2DRO
         ROS_INFO_STREAM("Load param max_curvature: " << max_curvature_);
         ROS_INFO_STREAM("Load param curvature_safety_margin: " << curvature_safety_margin_);
 
+        bool get_curvature_from_formation = this->max_curvature_ == -1.0;
+        ROS_INFO_STREAM("if get curve: " << get_curvature_from_formation);
         std::vector<std::string> robot_names;
         XmlRpc::XmlRpcValue formation_robots;
         private_nh.param("formation_config/robot_names", formation_robots, formation_robots);
+        double max_curvature_from_formation = std::numeric_limits<double>::infinity();
         for (int i = 0; i < formation_robots.size(); i++)
         {
             std::string robot_namespace = formation_robots[i];
@@ -80,15 +83,19 @@ void SplinedVoronoiPlanner::initialize(std::string name, costmap_2d::Costmap2DRO
             ROS_INFO_STREAM("Got y offset: " << rel_y_offset);
             ROS_INFO_STREAM("Got yaw offset: " << rel_yaw_offset);
             this->robot_formation_.push_back({rel_x_offset, rel_y_offset});
-            double min_radius = sqrt(pow(rel_x_offset, 2) + pow(rel_y_offset, 2));
-            if (rel_x_offset != 0.0)
+            if (get_curvature_from_formation)
             {
-                min_radius *= cos(atan(rel_y_offset / rel_x_offset));
-            }
-            ROS_INFO_STREAM("Got min radius: " << min_radius);
-            if (1.0 / min_radius < this->max_curvature_)
-            {
-                this->max_curvature_ = 1.0 / min_radius;
+                double min_radius = sqrt(pow(rel_x_offset, 2) + pow(rel_y_offset, 2));
+                if (rel_x_offset != 0.0)
+                {
+                    min_radius *= cos(atan(rel_y_offset / rel_x_offset));
+                }
+                ROS_INFO_STREAM("Got min radius: " << min_radius);
+                if (1.0 / min_radius < max_curvature_from_formation)
+                {
+                    max_curvature_from_formation = 1.0 / min_radius;
+                    this->max_curvature_ = max_curvature_from_formation;
+                }
             }
         }
         ROS_INFO_STREAM("max_curvature from formation: " << max_curvature_);
