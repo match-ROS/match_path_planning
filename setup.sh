@@ -1,6 +1,6 @@
 git submodule update --init --recursive
 cd splined_voronoi/nlopt/
-cmake ..
+cmake .
 make
 sudo make install
 
