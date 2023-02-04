@@ -9,6 +9,7 @@ add_compile_options(-std=c++11)
 # # is used, also find other catkin packages
 find_package(catkin REQUIRED COMPONENTS
   roscpp
+  message_generation
   cv_bridge
   rospy
   std_msgs
