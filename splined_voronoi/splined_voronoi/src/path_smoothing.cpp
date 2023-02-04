@@ -253,6 +253,11 @@ void equidistantSampling(const tinyspline::BSpline& spline, double sample_distan
 void getSplinePathSamples(const std::vector<cv::Point2d>& points, std::vector<double>& lengths, std::vector<cv::Point2d>& points_out, double sample_distance, double default_length)
 {
     std::vector<std::vector<cv::Point2d>> control_points_path;
+    if (points.size() < 3)
+    {
+        ROS_ERROR("Not enough points to build spline");
+        return;
+    }
     calcControlPointsForPath(points, lengths, control_points_path, default_length);
 
     for (auto control_points: control_points_path)
