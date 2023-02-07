@@ -105,21 +105,25 @@ int findDijkstraPathToVoronoi(const cv::Mat& obstacle_map, const cv::Mat& vorono
 /** @brief calculates heuristic cost between cells with euclidean distance
  *
  */
-float calcHCost(cv::Point2i current_cell, cv::Point2i target_cell)
+float calcHCost(cv::Point2i current_cell, cv::Point2i target_cell, bool use_euclidian_dist)
 {
     double l2_dist = std::sqrt(std::pow(current_cell.x - target_cell.x, 2) + std::pow(current_cell.y - target_cell.y, 2));
     double l1_dist = abs(current_cell.x - target_cell.x) + abs(current_cell.y - target_cell.y);
+    if (use_euclidian_dist)
+    {
+        return l2_dist;
+    }
     return l1_dist;
 }
 
 float calcGCost(float current_cell_g_cost, cv::Point2i current_cell, cv::Point2i target_cell)
 {
-    return current_cell_g_cost + calcHCost(current_cell, target_cell);
+    return current_cell_g_cost + calcHCost(current_cell, target_cell, true);
 }
 
 float calcFCost(float current_cell_g_score, cv::Point2i current_cell, cv::Point2i target_cell, cv::Point2i goal_cell)
 {
-    return calcGCost(current_cell_g_score, current_cell, target_cell) + calcHCost(target_cell, goal_cell);
+    return calcGCost(current_cell_g_score, current_cell, target_cell) + calcHCost(target_cell, goal_cell, false);
 }
 
 bool findRelaxedAStarPathOnImage(const cv::Mat& voronoi_map, std::vector<cv::Point2i>& out_path, cv::Point2i start,
@@ -146,7 +150,7 @@ bool findRelaxedAStarPathOnImage(const cv::Mat& voronoi_map, std::vector<cv::Poi
     g_score.at<float>(start.x, start.y) = 0;
     // fill gscore array with AStar
     std::multiset<AStarCell, std::less<AStarCell>> array_open_cell_list;
-    array_open_cell_list.insert({ start, calcHCost(start, goal) });
+    array_open_cell_list.insert({ start, calcHCost(start, goal, false) });
     ROS_DEBUG("Creating g score array");
     int loop_counter = 0;
 
@@ -434,7 +438,7 @@ bool isPlanFree(std::shared_ptr<costmap_2d::Costmap2D> costmap, int free_cell_th
         worldToMap(cv::Point2d(pose.pose.position.x, pose.pose.position.y), point_map, map_origin, map_size_x,
                    map_size_y, map_resolution);
 
-        if (costmap->getCost(point_map.x, point_map.y) > free_cell_threshold)
+        if (costmap->getCost(point_map.x, point_map.y) > free_cell_threshold && costmap->getCost(point_map.x, point_map.y) != 255)
         {
             ROS_WARN_STREAM("Plan is not free at " << point_map.x << ", " << point_map.y);
             return false;

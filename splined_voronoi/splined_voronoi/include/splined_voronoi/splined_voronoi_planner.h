@@ -137,6 +137,7 @@ private:
 
     cv::Mat voronoi_img_;
     cv::Mat obstacle_img_;
+    cv::Mat obstacle_img_wo_unknowns_;
 
     // output for service response
     std::vector<geometry_msgs::PoseStamped> astar_path_;

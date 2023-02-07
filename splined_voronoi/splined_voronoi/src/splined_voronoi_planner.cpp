@@ -34,6 +34,7 @@ void SplinedVoronoiPlanner::initialize(std::string name, costmap_2d::Costmap2DRO
         ROS_INFO("SplinedVoronoiPlanner Init got called!");
         ROS_INFO_STREAM("Name: " << name);
         ros::NodeHandle private_nh("~/" + name);
+        // costmap_layered = costmap_ros->getLayeredCostmap()
         costmap_ = std::shared_ptr<costmap_2d::Costmap2D>(costmap_ros->getCostmap());
         costmap_global_frame_ = costmap_ros->getGlobalFrameID();
         costmap_size_x_ = costmap_->getSizeInCellsX();
@@ -271,12 +272,22 @@ bool SplinedVoronoiPlanner::makePlan(const geometry_msgs::PoseStamped& start, co
     this->costmap_size_x_ = this->costmap_->getSizeInCellsX();
     this->costmap_size_y_ = this->costmap_->getSizeInCellsY();
     cv::Mat costmap_img_orig = cv::Mat::zeros(this->costmap_size_x_, this->costmap_size_y_, CV_8UC1);
+    cv::Mat costmap_img_wo_unknowns = cv::Mat::zeros(this->costmap_size_x_, this->costmap_size_y_, CV_8UC1);
     int obstacle_count = 0;
+    double max_val = 0;
+    double min_val = 255;
+    std::vector<double> values_used;
+    int unknown_counter = 0;
     for (int i = 0; i < this->costmap_size_x_; i++)
     {
         for (int j = 0; j < this->costmap_size_y_; j++)
         {
             double cell_cost = this->costmap_->getCost(i, j);
+            if (cell_cost != costmap_2d::NO_INFORMATION && cell_cost > free_cell_threshold_)
+            {
+                costmap_img_wo_unknowns.at<uchar>(i, j, 0) = 255;
+                unknown_counter++;
+            }
             if (cell_cost > free_cell_threshold_)
             {
                 costmap_img_orig.at<uchar>(i, j, 0) = 255;
@@ -284,6 +295,14 @@ bool SplinedVoronoiPlanner::makePlan(const geometry_msgs::PoseStamped& start, co
             }
         }
     }
+    ROS_WARN_STREAM("Max Cost: " << max_val << ", min cost: " << min_val);
+    std::sort(values_used.begin(), values_used.end());
+    for (auto val : values_used)
+    {
+        std::cout << val << ", ";
+    }
+    std::cout << std::endl;
+    ROS_WARN_STREAM("Unknowns: " << unknown_counter << ", value: " << costmap_2d::NO_INFORMATION);
     // enlargen obstacles by formation radius
     cv::Mat costmap_dist_img;
     cv::distanceTransform(~costmap_img_orig, costmap_dist_img, cv::DIST_L2, 3, CV_8UC1);
@@ -292,6 +311,7 @@ bool SplinedVoronoiPlanner::makePlan(const geometry_msgs::PoseStamped& start, co
     costmap_img.convertTo(costmap_img, CV_8UC1);
 
     this->obstacle_img_ = costmap_img;
+    this->obstacle_img_wo_unknowns_ = costmap_img_wo_unknowns;
 
     // check if start or goal is in collision
     if (this->obstacle_img_.at<uchar>(this->start_map_.x, this->start_map_.y) == 255 || this->obstacle_img_.at<uchar>(this->goal_map_.x, this->goal_map_.y) == 255)
@@ -302,7 +322,7 @@ bool SplinedVoronoiPlanner::makePlan(const geometry_msgs::PoseStamped& start, co
 
     // check if start and goal are within the same connected component
     cv::Mat label_img;
-    int num_labels = cv::connectedComponents(~this->obstacle_img_, label_img, 8);
+    int num_labels = cv::connectedComponents(~this->obstacle_img_wo_unknowns_, label_img, 8);
     if (label_img.at<int>(this->start_map_.x, this->start_map_.y) != label_img.at<int>(this->goal_map_.x, this->goal_map_.y))
     {
         ROS_ERROR("Start and goal are not in the same connected component; Planning will always fail. Aborting..");
@@ -330,7 +350,7 @@ bool SplinedVoronoiPlanner::makePlan(const geometry_msgs::PoseStamped& start, co
 
     // get areas with large freespaces and overly voronoi diagram with it
     cv::Mat costmap_large_spaces;
-    cv::threshold(costmap_dist_img, costmap_large_spaces, this->free_space_factor_  / this->costmap_resolution_, 255, cv::THRESH_BINARY);
+    cv::threshold(costmap_img_orig, costmap_large_spaces, this->free_space_factor_  / this->costmap_resolution_, 255, cv::THRESH_BINARY);
     costmap_large_spaces.convertTo(costmap_large_spaces, CV_8UC1);
     cv::bitwise_or(this->voronoi_img_, costmap_large_spaces, this->voronoi_img_);
 
@@ -426,7 +446,7 @@ bool SplinedVoronoiPlanner::makePlan(const geometry_msgs::PoseStamped& start, co
     std::vector<cv::Point2d> continuous_path;
     std::vector<cv::Point2d> optimized_sparse_path;
     std::vector<double> optimized_lengths;
-    bool splining_success = path_smoothing::buildOptimizedContinuousPath(sparse_path_world, continuous_path, optimized_sparse_path, optimized_lengths, *(this->costmap_), this->obstacle_img_, this->max_curvature_, this->plan_resolution_, this->optimize_lengths_, this->max_optimization_time_);
+    bool splining_success = path_smoothing::buildOptimizedContinuousPath(sparse_path_world, continuous_path, optimized_sparse_path, optimized_lengths, *(this->costmap_), this->obstacle_img_wo_unknowns_, this->max_curvature_, this->plan_resolution_, this->optimize_lengths_, this->max_optimization_time_);
     ROS_INFO_STREAM("Optimization Status: " << splining_success);
     std_msgs::Float64MultiArray optimized_lengths_msg;
     optimized_lengths_msg.data = optimized_lengths;

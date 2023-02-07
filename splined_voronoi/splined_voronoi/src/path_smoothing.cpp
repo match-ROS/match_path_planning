@@ -317,14 +317,21 @@ double maxCostOfSpline(const tinyspline::BSpline& spline, const costmap_2d::Cost
     std::vector<cv::Point2i> samples_map;
     pathWorldToMap(samples, samples_map, std::make_shared<costmap_2d::Costmap2D>(costmap));
     double max_cost = 0.0;
-    for (auto pixel: samples_map)
+    cv::Point2d max_cost_ind;
+    for (int idx=0; idx<samples_map.size();idx++)
+    // for (auto pixel: samples_map)
     {
+        cv::Point2i pixel(samples_map.at(idx));
+        cv::Point2d point_world(samples.at(idx));
         float cost = costmap_img.at<float>(pixel.x, pixel.y);
         if (cost > max_cost)
         {
             max_cost = cost;
+            max_cost_ind = point_world;
+            // ROS_INFO_STREAM("Local maximum at: " << point_world.x << ", " << point_world.y);
         }
     }
+    // ROS_INFO_STREAM("Max cost ind: " << max_cost_ind);
     return max_cost;
 }
 
