@@ -340,7 +340,7 @@ void get_optimize_indices(const std::vector<cv::Point2d>& points, const std::vec
     std::vector<std::vector<cv::Point2d>> control_points_path;
     calcControlPointsForPath(points, lengths, control_points_path, -1.0);
 
-    for (int idx = 0; idx < control_points_path.size(); idx++)
+    for (int idx = 2; idx < control_points_path.size()-2; idx++)
     {
         std::vector<cv::Point2d> control_points = control_points_path.at(idx);
         tinyspline::BSpline spline = buildTinyspline(control_points);
