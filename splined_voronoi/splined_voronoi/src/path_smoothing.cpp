@@ -425,7 +425,7 @@ void get_optimize_indices(const std::vector<cv::Point2d>& points, const std::vec
             */
         }
     }
-    optimize_lengths_indices.push_back(control_points_path.size());
+    // optimize_lengths_indices.push_back(control_points_path.size());
 }
 
 
@@ -582,10 +582,11 @@ void maxCostAndCurvatureFromSpline(const std::vector<std::vector<cv::Point2d>>& 
     int map_size_x = optim_data.costmap.getSizeInCellsX();
     int map_size_y = optim_data.costmap.getSizeInCellsY();
     double map_resolution = optim_data.costmap.getResolution();
+    cv::Point2i last_point_map(-1,-1);
     for (auto control_points: control_points_path)
     {
         double eps = 0.0001;
-        for (double t = eps; t <= 1; t += 1. / 200.0)
+        for (double t = eps; t <= 1; t += 1. / 500.0)
         {
             cv::Point2d c = interpolate_spline(control_points, t);
             cv::Point2d cp = interpolate_spline_der(control_points, t);
@@ -597,6 +598,11 @@ void maxCostAndCurvatureFromSpline(const std::vector<std::vector<cv::Point2d>>& 
             }
             cv::Point2i point_map;
             worldToMap(c, point_map, map_origin, map_size_x, map_size_y, map_resolution);
+            if (point_map.x == last_point_map.x && point_map.y == last_point_map.y)
+            {
+                continue;
+            }
+            last_point_map = point_map;
             double pixel_cost = optim_data.costmap_img.at<float>(point_map.x, point_map.y);
             if (pixel_cost > max_cost)
             {
