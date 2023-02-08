@@ -253,7 +253,7 @@ void equidistantSampling(const tinyspline::BSpline& spline, double sample_distan
 void getSplinePathSamples(const std::vector<cv::Point2d>& points, std::vector<double>& lengths, std::vector<cv::Point2d>& points_out, double sample_distance, double default_length)
 {
     std::vector<std::vector<cv::Point2d>> control_points_path;
-    if (points.size() < 3)
+    if (points.size() < 3 or control_points_path.size() < 2)
     {
         ROS_ERROR("Not enough points to build spline");
         return;
@@ -708,6 +708,13 @@ int optimizeSplinePath(const std::vector<cv::Point2d>& points, std::vector<cv::P
 
     std::vector<int> optimize_indices;
     std::vector<int> optimize_lengths_indices;
+    if (optimize_indices.size() == 0)
+    {
+        ROS_INFO("No indices to optimize, returning");
+        optimized_points = points;
+        lengths_out = lengths;
+        return OptimizationStatus::NoOptimizationNeeded;
+    }
     get_optimize_indices(points, lengths, optimize_indices, optimize_lengths_indices, costmap, costmap_img, curve_max, true);
 
     std::cout << "Optimize indices: ";
@@ -767,7 +774,7 @@ int optimizeSplinePath(const std::vector<cv::Point2d>& points, std::vector<cv::P
 
 bool buildOptimizedContinuousPath(const std::vector<cv::Point2d>& sparse_path, std::vector<cv::Point2d>& path_out, std::vector<cv::Point2d>& optimized_sparse_path, std::vector<double>& optimized_lengths,
                                   const costmap_2d::Costmap2D& costmap, const cv::Mat& obstacle_img, double curve_max, double path_resolution, bool optimize_lengths, double max_optimization_time)
-{
+{ 
     path_out.clear();
     if (sparse_path.size() < 3)
     {
