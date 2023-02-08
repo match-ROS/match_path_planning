@@ -315,7 +315,7 @@ cv::Mat buildCostmapImg(const cv::Mat& img)
     cv::distanceTransform(~img, costmap_img, cv::DIST_L2, 3, CV_8UC1);
     // cv::imwrite("/home/rosmatch/Bilder/dists.png", costmap_img);
     cv::Mat combined_costmap_img;
-    cv::add(img, 255 - costmap_img, combined_costmap_img, cv::noArray(), CV_8UC1);
+    cv::add(img, 254 - costmap_img, combined_costmap_img, cv::noArray(), CV_8UC1);
     // cv::imwrite("/home/rosmatch/Bilder/costmap_img_dist.png", combined_costmap_img);
     cv::Mat costmap_img_inside_obstacles;
     cv::distanceTransform(img, costmap_img_inside_obstacles, cv::DIST_L2, 3);
