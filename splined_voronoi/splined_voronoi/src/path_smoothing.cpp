@@ -586,7 +586,7 @@ void maxCostAndCurvatureFromSpline(const std::vector<std::vector<cv::Point2d>>& 
     for (auto control_points: control_points_path)
     {
         double eps = 0.0001;
-        for (double t = eps; t <= 1; t += 1. / 500.0)
+        for (double t = eps; t < 1; t += 1. / 200.0)
         {
             cv::Point2d c = interpolate_spline(control_points, t);
             cv::Point2d cp = interpolate_spline_der(control_points, t);
