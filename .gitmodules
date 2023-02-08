@@ -1,6 +1,3 @@
-[submodule "voronoi_planner/tinyspline"]
-	path = splined_voronoi/tinyspline
-	url = https://github.com/msteinbeck/tinyspline
 [submodule "voronoi_planner/nlopt"]
 	path = splined_voronoi/nlopt
 	url = https://github.com/stevengj/nlopt
