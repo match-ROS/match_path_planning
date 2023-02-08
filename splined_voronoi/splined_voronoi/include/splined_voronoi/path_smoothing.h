@@ -3,7 +3,7 @@
 #include <iostream>
 #include <numeric>
 #include <chrono>
-#include <tinysplinecxx.h>
+// #include <tinysplinecxx.h>
 #include <nlopt.hpp>
 #include <ros/ros.h>
 #include <geometry_msgs/PoseStamped.h>

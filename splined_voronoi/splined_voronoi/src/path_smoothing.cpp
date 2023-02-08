@@ -189,62 +189,102 @@ bool calcControlPointsForPath(const std::vector<cv::Point2d>& points, const std:
     return true;
 }
 
-tinyspline::BSpline buildTinyspline(std::vector<cv::Point2d> control_points)
+
+cv::Point2d interpolate_spline(const std::vector<cv::Point2d>& control_points, double fraction)
 {
-    // ROS_INFO("Building spline");
-    tinyspline::BSpline spline(6, 2, 5);
-    // Setup control points. They are stored as x0, y0, x1, y1, x2, y2, etc.
-    std::vector<tinyspline::real> ctrlp = spline.controlPoints();
-    ctrlp[0] = (tsReal)control_points.at(0).x;
-    ctrlp[1] = (tsReal)control_points.at(0).y;
-    ctrlp[2] = (tsReal)control_points.at(1).x;
-    ctrlp[3] = (tsReal)control_points.at(1).y;
-    ctrlp[4] = (tsReal)control_points.at(2).x;
-    ctrlp[5] = (tsReal)control_points.at(2).y;
-    ctrlp[6] = (tsReal)control_points.at(3).x;
-    ctrlp[7] = (tsReal)control_points.at(3).y;
-    ctrlp[8] = (tsReal)control_points.at(4).x;
-    ctrlp[9] = (tsReal)control_points.at(4).y;
-    ctrlp[10] = (tsReal)control_points.at(5).x;
-    ctrlp[11] = (tsReal)control_points.at(5).y;
-    spline.setControlPoints(ctrlp);
-    return spline;
+    cv::Point2d p_0(control_points.at(0));
+    cv::Point2d p_1(control_points.at(1));
+    cv::Point2d p_2(control_points.at(2));
+    cv::Point2d p_3(control_points.at(3));
+    cv::Point2d p_4(control_points.at(4));
+    cv::Point2d p_5(control_points.at(5));
+    cv::Point2d c_qb_0 = -p_0 + 5 * p_1 - 10 * p_2 + 10 * p_3 - 5 * p_4 + p_5;
+    cv::Point2d c_qb_1 = 5 * p_0 - 20 * p_1 + 30 * p_2 - 20 * p_3 + 5 * p_4;
+    cv::Point2d c_qb_2 = -10 * p_0 + 30 * p_1 - 30 * p_2 + 10 * p_3;
+    cv::Point2d c_qb_3 = 10 * p_0 - 20 * p_1 + 10 * p_2;
+    cv::Point2d c_qb_4 = -5 * p_0 + 5 * p_1;
+    cv::Point2d c_qb_5 = p_0;
+    cv::Point2d out_sample = pow(fraction, 5) * c_qb_0 + pow(fraction, 4) * c_qb_1 + pow(fraction, 3) * c_qb_2 + pow(fraction, 2) * c_qb_3 + fraction * c_qb_4 + c_qb_5;
+    return out_sample;
 }
 
 
-double calcTinysplineLength(const tinyspline::BSpline& spline)
+cv::Point2d interpolate_spline_der(const std::vector<cv::Point2d>& control_points, double fraction)
+{
+    cv::Point2d p_0(control_points.at(0));
+    cv::Point2d p_1(control_points.at(1));
+    cv::Point2d p_2(control_points.at(2));
+    cv::Point2d p_3(control_points.at(3));
+    cv::Point2d p_4(control_points.at(4));
+    cv::Point2d p_5(control_points.at(5));
+    cv::Point2d c_qb_0 = -p_0 + 5 * p_1 - 10 * p_2 + 10 * p_3 - 5 * p_4 + p_5;
+    cv::Point2d c_qb_1 = 5 * p_0 - 20 * p_1 + 30 * p_2 - 20 * p_3 + 5 * p_4;
+    cv::Point2d c_qb_2 = -10 * p_0 + 30 * p_1 - 30 * p_2 + 10 * p_3;
+    cv::Point2d c_qb_3 = 10 * p_0 - 20 * p_1 + 10 * p_2;
+    cv::Point2d c_qb_4 = -5 * p_0 + 5 * p_1;
+    cv::Point2d c_qb_5 = p_0;
+    cv::Point2d out_sample = 5 * pow(fraction, 4) * c_qb_0 + 4 * pow(fraction, 3) * c_qb_1 + 3 * pow(fraction, 2) * c_qb_2 + 2 * fraction * c_qb_3 + c_qb_4;
+    return out_sample;
+}
+
+cv::Point2d interpolate_spline_der2(const std::vector<cv::Point2d>& control_points, double fraction)
+{
+    cv::Point2d p_0(control_points.at(0));
+    cv::Point2d p_1(control_points.at(1));
+    cv::Point2d p_2(control_points.at(2));
+    cv::Point2d p_3(control_points.at(3));
+    cv::Point2d p_4(control_points.at(4));
+    cv::Point2d p_5(control_points.at(5));
+    cv::Point2d c_qb_0 = -p_0 + 5 * p_1 - 10 * p_2 + 10 * p_3 - 5 * p_4 + p_5;
+    cv::Point2d c_qb_1 = 5 * p_0 - 20 * p_1 + 30 * p_2 - 20 * p_3 + 5 * p_4;
+    cv::Point2d c_qb_2 = -10 * p_0 + 30 * p_1 - 30 * p_2 + 10 * p_3;
+    cv::Point2d c_qb_3 = 10 * p_0 - 20 * p_1 + 10 * p_2;
+    cv::Point2d c_qb_4 = -5 * p_0 + 5 * p_1;
+    cv::Point2d c_qb_5 = p_0;
+    cv::Point2d out_sample = 20 * pow(fraction, 3) * c_qb_0 + 12 * pow(fraction, 2) * c_qb_1 + 6 * fraction * c_qb_2 + 2 * c_qb_3;
+    return out_sample;
+}
+
+bool sample_spline(const std::vector<cv::Point2d>& control_points, std::vector<cv::Point2d>& out_samples, int num_samples)
+{
+    for (int idx = 0; idx < num_samples; idx++)
+    {
+        double frac = (double)idx / (double)num_samples;
+        out_samples.push_back(interpolate_spline(control_points, frac));
+    }
+    return true;
+}
+
+double calcSplineLength(const std::vector<cv::Point2d>& control_points)
 {
     int num_samples = 100;
-    std::vector<tinyspline::real> sampled_points_for_length = spline.sample(num_samples);
+    std::vector<cv::Point2d> sampled_points_for_length;
+    sample_spline(control_points, sampled_points_for_length, num_samples);
     double spline_length = 0.0;
-    for (int index_x = 2; index_x < sampled_points_for_length.size() - 1; index_x += 2)
+    for (int idx = 1; idx < sampled_points_for_length.size(); idx++)
     {
-        int index_y = index_x + 1;
-        double x_val = sampled_points_for_length.at(index_x);
-        double y_val = sampled_points_for_length.at(index_y);
-        double last_x_val = sampled_points_for_length.at(index_x - 2);
-        double last_y_val = sampled_points_for_length.at(index_y - 2);
-        double segdist = sqrt(pow(x_val - last_x_val, 2) + pow(y_val - last_y_val, 2));
+        cv::Point2d curr_sample = sampled_points_for_length.at(idx);
+        cv::Point2d last_sample = sampled_points_for_length.at(idx - 1);
+        cv::Point2d diff = curr_sample - last_sample;
+        double segdist = sqrt(pow(diff.x, 2) + pow(diff.y, 2));
         spline_length += segdist;
     }
     return spline_length;
 }
 
-void equidistantSampling(const tinyspline::BSpline& spline, double sample_distance, std::vector<cv::Point2d>& samples)
+void equidistantSampling(const std::vector<cv::Point2d>& control_points, double sample_distance, std::vector<cv::Point2d>& samples)
 {
     samples.clear();
-    double spline_length = calcTinysplineLength(spline);
-    tinyspline::Vec2 last_sample = spline(0).resultVec2();
+    double spline_length = calcSplineLength(control_points);
+    cv::Point2d last_sample = interpolate_spline(control_points, 0);
     int num_samples = (int) 10 * spline_length / sample_distance;
     for (double frac = 0.0; frac <= 1; frac+=1.0/(double)num_samples)
     {
-        tinyspline::Vec2 sample = spline(frac).resultVec2();
-        tinyspline::Vec2 diff = sample - last_sample;
-        if (diff.magnitude() > sample_distance)
+        cv::Point2d sample = interpolate_spline(control_points, frac);
+        cv::Point2d diff = sample - last_sample;
+        if (sqrt(pow(diff.x, 2) + pow(diff.y, 2)) > sample_distance)
         {
-            double x_val = sample.x();
-            double y_val = sample.y();
-            samples.push_back(cv::Point2d(x_val, y_val));
+            samples.push_back(sample);
             last_sample = sample;
         }
     }
@@ -262,13 +302,11 @@ void getSplinePathSamples(const std::vector<cv::Point2d>& points, std::vector<do
 
     for (auto control_points: control_points_path)
     {
-        tinyspline::BSpline spline = buildTinyspline(control_points);
         std::vector<cv::Point2d> samples_seg;
-        equidistantSampling(spline, sample_distance, samples_seg);
+        equidistantSampling(control_points, sample_distance, samples_seg);
         points_out.insert(points_out.end(), samples_seg.begin(), samples_seg.end());
     }
 }
-
 
 cv::Mat buildCostmapImg(const cv::Mat& img)
 {
@@ -290,30 +328,26 @@ cv::Mat buildCostmapImg(const cv::Mat& img)
     return costmap_img_inside_obstacles;
 }
 
-
-std::vector<double> tinysplineCurvatures(const tinyspline::BSpline& spline, int num_samples = 1000)
+std::vector<double> splineCurvatures(const std::vector<cv::Point2d>& control_points, int num_samples = 1000)
 {
     // ROS_INFO("Calculating curvatures");
-    tinyspline::BSpline spline_deriv = spline.derive();
-    tinyspline::BSpline spline_deriv2 = spline_deriv.derive();
     std::vector<double> curvatures;
     double eps = 0.0001;
-    for (double t = 0; t <= 1; t += 1. / (double)num_samples)
+    for (double t = eps; t <= 1; t += 1. / (double)num_samples)
     {
-        tinyspline::Vec3 cp = spline_deriv(t).resultVec3();
-        tinyspline::Vec3 cpp = spline_deriv2(t).resultVec3();
-        double curvature = abs((cp.x() * cpp.y() - cpp.x() * cp.y())/ pow(pow(cp.x(), 2) + pow(cp.y(), 2), 1.5));
+        cv::Point2d cp = interpolate_spline_der(control_points, t);
+        cv::Point2d cpp = interpolate_spline_der2(control_points, t);
+        double curvature = abs((cp.x * cpp.y - cpp.x * cp.y)/ pow(pow(cp.x, 2) + pow(cp.y, 2), 1.5));
         curvatures.push_back(curvature);
     }
     return curvatures;
 }
 
-
-double maxCostOfSpline(const tinyspline::BSpline& spline, const costmap_2d::Costmap2D& costmap, const cv::Mat& costmap_img)
+double maxCostOfSpline(const std::vector<cv::Point2d>& control_points, const costmap_2d::Costmap2D& costmap, const cv::Mat& costmap_img)
 {
     double sample_distance = 0.02;
     std::vector<cv::Point2d> samples;
-    equidistantSampling(spline, sample_distance, samples);
+    equidistantSampling(control_points, sample_distance, samples);
     std::vector<cv::Point2i> samples_map;
     pathWorldToMap(samples, samples_map, std::make_shared<costmap_2d::Costmap2D>(costmap));
     double max_cost = 0.0;
@@ -343,10 +377,9 @@ void get_optimize_indices(const std::vector<cv::Point2d>& points, const std::vec
     for (int idx = 0; idx < control_points_path.size(); idx++)
     {
         std::vector<cv::Point2d> control_points = control_points_path.at(idx);
-        tinyspline::BSpline spline = buildTinyspline(control_points);
-        std::vector<double> curvatures = tinysplineCurvatures(spline, 200);
+        std::vector<double> curvatures = splineCurvatures(control_points, 200);
         double max_curvature = *std::max_element(curvatures.begin(), curvatures.end());
-        double max_cost_seg = maxCostOfSpline(spline, costmap, costmap_img);
+        double max_cost_seg = maxCostOfSpline(control_points, costmap, costmap_img);
         if (max_curvature > curve_max)
         {
             optimize_indices.push_back(idx + 1);
@@ -456,8 +489,7 @@ double maxCostOfPath(const std::vector<double> &x, std::vector<double> &grad, vo
         {
             // continue;
         }
-        tinyspline::BSpline spline = buildTinyspline(control_points);
-        double max_cost_seg = maxCostOfSpline(spline, constraint_data->costmap, constraint_data->costmap_img);
+        double max_cost_seg = maxCostOfSpline(control_points, constraint_data->costmap, constraint_data->costmap_img);
         if (max_cost_seg > max_cost)
         {
             max_cost = max_cost_seg;
@@ -517,8 +549,7 @@ double maxCurvatureFromPoints(const std::vector<double> &x, std::vector<double> 
         {
             // continue;
         }
-        tinyspline::BSpline spline = buildTinyspline(control_points);
-        std::vector<double> curvatures = tinysplineCurvatures(spline, 200);
+        std::vector<double> curvatures = splineCurvatures(control_points, 200);
         double max_curvature_seg = *std::max_element(curvatures.begin(), curvatures.end());
         if (max_curvature_seg > max_curvature)
         {

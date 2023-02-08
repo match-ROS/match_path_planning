@@ -23,8 +23,8 @@ find_package(OpenCV)
 
 find_package(Eigen3 REQUIRED)
 
-set(tinysplinecxx_DIR "/usr/local/lib64/cmake/tinysplinecxx/")
-find_package(tinysplinecxx)
+# set(tinysplinecxx_DIR "/usr/local/lib64/cmake/tinysplinecxx/")
+# find_package(tinysplinecxx)
 
 # set(nlopt_DIR "/usr/local/lib/cmake/nlopt/")
 find_package(NLopt)
@@ -76,7 +76,7 @@ include_directories(
   include
   ${catkin_INCLUDE_DIRS}
   ${OpenCV_INCLUDE_DIRS}
-  ${TINYSPLINECXX_INCLUDE_DIRS}
+  # ${TINYSPLINECXX_INCLUDE_DIRS}
   ${NLOPT_INCLUDE_DIRS}
 )
 
@@ -85,7 +85,7 @@ add_library(splined_voronoi src/splined_voronoi_planner.cpp src/path_planning sr
 target_link_libraries(splined_voronoi
   ${catkin_LIBRARIES}
   ${OpenCV_LIBRARIES}
-  ${TINYSPLINECXX_LIBRARIES}
+  # ${TINYSPLINECXX_LIBRARIES}
   ${NLOPT_LIBRARIES}
 )
 add_dependencies(splined_voronoi ${catkin_EXPORTED_TARGETS} ${PROJECT_NAME}_gencfg)
