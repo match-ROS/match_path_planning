@@ -350,7 +350,7 @@ void get_optimize_indices(const std::vector<cv::Point2d>& points, const std::vec
         if (max_curvature > curve_max)
         {
             optimize_indices.push_back(idx + 1);
-            ROS_INFO_STREAM_COND(print_output, "Segment " << idx + 1 << " needs optimization with curvature " << max_curvature);
+            // ROS_INFO_STREAM_COND(print_output, "Segment " << idx + 1 << " needs optimization with curvature " << max_curvature);
         }
         else if (max_cost_seg > 254.0)
         {
