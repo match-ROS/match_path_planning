@@ -4,7 +4,7 @@ This Package contains a global path planner for multi robot formations based on 
 
 ## Installation
 
-Need tinyspline and nlopt built from source which are contained as git submodules
+Need nlopt built from source which is contained as git submodules
 
 ```bash
 cd path/to/match_path_planning
@@ -16,15 +16,6 @@ cd build
 cmake ..
 make
 sudo make install
-
-cd path/to/match_path_planning
-cd splined_voronoi
-cd tinyspline
-mkdir build
-cd build
-cmake -DBUILD_SHARED_LIBS=True ..
-cmake --build .
-sudo cmake --build . --target install
 ```
 
 Install dependencies from rosdep:
