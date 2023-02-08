@@ -640,11 +640,9 @@ double combinedMinFunction(const std::vector<double> &x, std::vector<double> &gr
     std::vector<std::vector<cv::Point2d>> control_points_path;
     calcControlPointsForPath(points_orig_replaced, lengths, control_points_path, optim_data->default_length);
 
-    double max_cost;
-    double max_curvature;
+    double max_cost = 0;
+    double max_curvature = 0;
     maxCostAndCurvatureFromSpline(control_points_path, *optim_data, max_curvature, max_cost);
-    max_cost += 254.0;
-    max_curvature += optim_data->curvature_limit;
     // end of new part
 
 
@@ -675,6 +673,7 @@ double combinedMinFunction(const std::vector<double> &x, std::vector<double> &gr
     double total_time_in_optimization = (std::chrono::duration_cast<std::chrono::microseconds>(end_min_func - optim_data->start_time).count()) / 1000000.0;
     if (total_time_in_optimization > optim_data->time_limit)
     {
+        ROS_INFO_STREAM("Last vals before aborting: " << max_cost << ", " << max_curvature);
         optim_data->was_terminated = false;
         throw nlopt::forced_stop();
     }
