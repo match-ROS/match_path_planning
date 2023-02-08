@@ -380,6 +380,7 @@ void get_optimize_indices(const std::vector<cv::Point2d>& points, const std::vec
         std::vector<double> curvatures = splineCurvatures(control_points, 200);
         double max_curvature = *std::max_element(curvatures.begin(), curvatures.end());
         double max_cost_seg = maxCostOfSpline(control_points, costmap, costmap_img);
+        // optimize_lengths_indices.push_back(idx);
         if (max_curvature > curve_max)
         {
             optimize_indices.push_back(idx + 1);
@@ -424,6 +425,7 @@ void get_optimize_indices(const std::vector<cv::Point2d>& points, const std::vec
             */
         }
     }
+    optimize_lengths_indices.push_back(control_points_path.size());
 }
 
 
@@ -574,6 +576,36 @@ double maxCurvatureFromPoints(const std::vector<double> &x, std::vector<double> 
     return max_curvature - constraint_data->curvature_limit;
 }
 
+void maxCostAndCurvatureFromSpline(const std::vector<std::vector<cv::Point2d>>& control_points_path, const specific_points_optim_data& optim_data, double& max_curvature, double& max_cost)
+{
+    cv::Point2d map_origin(optim_data.costmap.getOriginX(), optim_data.costmap.getOriginY());
+    int map_size_x = optim_data.costmap.getSizeInCellsX();
+    int map_size_y = optim_data.costmap.getSizeInCellsY();
+    double map_resolution = optim_data.costmap.getResolution();
+    for (auto control_points: control_points_path)
+    {
+        double eps = 0.0001;
+        for (double t = eps; t <= 1; t += 1. / 200.0)
+        {
+            cv::Point2d c = interpolate_spline(control_points, t);
+            cv::Point2d cp = interpolate_spline_der(control_points, t);
+            cv::Point2d cpp = interpolate_spline_der2(control_points, t);
+            double curvature = abs((cp.x * cpp.y - cpp.x * cp.y)/ pow(pow(cp.x, 2) + pow(cp.y, 2), 1.5));
+            if (curvature > max_curvature)
+            {
+                max_curvature = curvature;
+            }
+            cv::Point2i point_map;
+            worldToMap(c, point_map, map_origin, map_size_x, map_size_y, map_resolution);
+            double pixel_cost = optim_data.costmap_img.at<float>(point_map.x, point_map.y);
+            if (pixel_cost > max_cost)
+            {
+                max_cost = pixel_cost;
+            }
+        }
+    }
+}
+
 double combinedMinFunction(const std::vector<double> &x, std::vector<double> &grad, void *data)
 {
     std::string curr_vals_msg = "";
@@ -581,12 +613,38 @@ double combinedMinFunction(const std::vector<double> &x, std::vector<double> &gr
     {
         curr_vals_msg += std::to_string(val) + " ";
     }
-    ROS_INFO_STREAM("Current values: " << curr_vals_msg);
+    // ROS_INFO_STREAM("Current values: " << curr_vals_msg);
     std::chrono::steady_clock::time_point start_min_func = std::chrono::steady_clock::now();
     specific_points_optim_data *optim_data = reinterpret_cast<specific_points_optim_data*>(data);
+
+    // sample spline so that individual functions dont have to do it
+    int begin_lengths_index = optim_data->optimize_indices.size() * 2;
+    std::vector<double> lengths_orig(optim_data->points_orig.size() - 1, optim_data->default_length);
+    std::vector<double> lengths(lengths_orig);
+    if (optim_data->optimize_lengths)
+    {
+        std::vector<double> lengths_opt = std::vector<double>(x.begin() + begin_lengths_index, x.end());
+        replaceValsInVec(lengths_opt, lengths_orig, optim_data->optimize_lengths_indices, lengths);
+    }
+    std::vector<double> points_flattened = std::vector<double>(x.begin(), x.begin() + begin_lengths_index);
+    std::vector<cv::Point2d> points = vecToPoints(points_flattened);
+    std::vector<cv::Point2d> points_orig_replaced;
+    replaceValsInVec(points, optim_data->points_orig, optim_data->optimize_indices, points_orig_replaced);
+    std::vector<cv::Point2d> connection_points = calcConnectionPoints(points_orig_replaced);
+    std::vector<std::vector<cv::Point2d>> control_points_path;
+    calcControlPointsForPath(points_orig_replaced, lengths, control_points_path, optim_data->default_length);
+
+    double max_cost;
+    double max_curvature;
+    maxCostAndCurvatureFromSpline(control_points_path, *optim_data, max_curvature, max_cost);
+    max_cost += 254.0;
+    max_curvature += optim_data->curvature_limit;
+    // end of new part
+
+
     double distance_to_orig = deviationPoints(x, grad, data);
-    double max_cost = maxCostOfPath(x, grad, data) + 254.0;
-    double max_curvature = maxCurvatureFromPoints(x, grad, data) + optim_data->curvature_limit;
+    // double max_cost = maxCostOfPath(x, grad, data) + 254.0;
+    // double max_curvature = maxCurvatureFromPoints(x, grad, data) + optim_data->curvature_limit;
     double curvature_penalty = 0.0;
     double cost_penalty = 0.0;
     if (max_curvature > optim_data->curvature_limit)
