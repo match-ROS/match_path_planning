@@ -359,7 +359,7 @@ void get_optimize_indices(const std::vector<cv::Point2d>& points, const std::vec
         }
         else
         {
-            ROS_INFO_STREAM_COND(print_output, "Segment " << idx + 1 << " does not need optimization with curvature " << max_curvature);
+            // ROS_INFO_STREAM_COND(print_output, "Segment " << idx + 1 << " does not need optimization with curvature " << max_curvature);
             bool idx_in_optimize = std::find(optimize_indices.begin(), optimize_indices.end(), idx) != optimize_indices.end();
             bool idx_already_contained = std::find(optimize_lengths_indices.begin(), optimize_lengths_indices.end(), idx) != optimize_lengths_indices.end();
             bool next_idx_already_contained = std::find(optimize_lengths_indices.begin(), optimize_lengths_indices.end(), idx + 1) != optimize_lengths_indices.end();
@@ -633,7 +633,6 @@ int optimizeSpecificPoints(const std::vector<cv::Point2d>& points_orig, const st
         }
     }
     double min_val;
-    ROS_INFO("Right before start");
 
     std::vector<double> grad_vec;
     double deviation_start = deviationPoints(points_to_optim_flattened, grad_vec, &optim_data);
@@ -643,7 +642,7 @@ int optimizeSpecificPoints(const std::vector<cv::Point2d>& points_orig, const st
     double max_curve_start = maxCurvatureFromPoints(points_to_optim_flattened, grad_vec, &optim_data) + optim_data.curvature_limit;
     ROS_INFO_STREAM("Start max curve: " << max_curve_start);
 
-    ROS_INFO("Preparation for optimization done!");
+    ROS_INFO("Starting optimization...");
     bool aborted = false;
     try
     {
@@ -653,7 +652,7 @@ int optimizeSpecificPoints(const std::vector<cv::Point2d>& points_orig, const st
     }
     catch(std::exception &err)
     {
-        ROS_ERROR_STREAM("nlopt failed: " << err.what());
+        ROS_WARN_STREAM("nlopt finished with error: " << err.what());
         if (optim_data.was_terminated)
         {
             ROS_INFO("Optimization was terminated because fitting value was found!");
@@ -710,15 +709,17 @@ int optimizeSplinePath(const std::vector<cv::Point2d>& points, std::vector<cv::P
     std::vector<int> optimize_lengths_indices;
     get_optimize_indices(points, lengths, optimize_indices, optimize_lengths_indices, costmap, costmap_img, curve_max, true);
 
-    std::cout << "Optimize indices: ";
+    std::string opt_ind_output = "Optimize indices: ";
     for (int i = 0; i < optimize_indices.size(); i++)
-        std::cout << optimize_indices.at(i) << " ";
-    std::cout << std::endl;
+        opt_ind_output += std::to_string(optimize_indices.at(i)) + " ";
+    ROS_INFO_STREAM(opt_ind_output);
 
+    /*
     std::cout << "Optimize length indices: ";
     for (int i = 0; i < optimize_lengths_indices.size(); i++)
         std::cout << optimize_lengths_indices.at(i) << " ";
     std::cout << std::endl;
+    */
 
     double default_length_1 = 0.5;
     double default_length_2 = 0.25;

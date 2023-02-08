@@ -249,8 +249,6 @@ bool findRelaxedAStarPathOnImage(const cv::Mat& voronoi_map, std::vector<cv::Poi
 
 bool findCompletePath(const cv::Mat& obstacle_img, const cv::Mat& voronoi_img, std::vector<cv::Point2i>& path, cv::Point2i start, cv::Point2i goal)
 {
-    ROS_INFO("inside findCompletePath");
-
     int connect_goal_success = PlanningStatus::Failed;
     int connect_start_success = PlanningStatus::Failed;
 

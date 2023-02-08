@@ -31,8 +31,8 @@ void SplinedVoronoiPlanner::initialize(std::string name, costmap_2d::Costmap2DRO
 {
     if (!initialized_)
     {
-        ROS_INFO("SplinedVoronoiPlanner Init got called!");
-        ROS_INFO_STREAM("Name: " << name);
+        ROS_INFO("SplinedVoronoiPlanner: Init got called!");
+        // ROS_INFO_STREAM("Planner Name: " << name);
         ros::NodeHandle private_nh("~/" + name);
         // costmap_layered = costmap_ros->getLayeredCostmap()
         costmap_ = std::shared_ptr<costmap_2d::Costmap2D>(costmap_ros->getCostmap());
@@ -42,10 +42,9 @@ void SplinedVoronoiPlanner::initialize(std::string name, costmap_2d::Costmap2DRO
         costmap_resolution_ = costmap_->getResolution();
         this->map_origin_ = cv::Point2d(this->costmap_->getOriginX(), this->costmap_->getOriginY());
 
-        ROS_INFO_STREAM("Costmap values:");
-        ROS_INFO_STREAM("Size: " << costmap_size_x_ << ", " << costmap_size_y_);
-        ROS_INFO_STREAM("Origin: " << map_origin_.x << ", " << map_origin_.y);
-        ROS_INFO_STREAM("Resolution: " << costmap_resolution_);
+        ROS_INFO_STREAM("Costmap Size: " << costmap_size_x_ << ", " << costmap_size_y_);
+        ROS_INFO_STREAM("Costmap Origin: " << map_origin_.x << ", " << map_origin_.y);
+        ROS_INFO_STREAM("Costmap Resolution: " << costmap_resolution_);
 
         // get params
         private_nh.param("free_cell_threshold", free_cell_threshold_, 0.0);
@@ -64,7 +63,8 @@ void SplinedVoronoiPlanner::initialize(std::string name, costmap_2d::Costmap2DRO
         ROS_INFO_STREAM("Load param curvature_safety_margin: " << curvature_safety_margin_);
 
         bool get_curvature_from_formation = this->max_curvature_ == -1.0;
-        ROS_INFO_STREAM("if get curve: " << get_curvature_from_formation);
+        std::string get_curve_msg = get_curvature_from_formation ? "True" : "False";
+        ROS_INFO_STREAM("Calculating curvature from formation: " << get_curve_msg);
         std::vector<std::string> robot_names;
         XmlRpc::XmlRpcValue formation_robots;
         private_nh.param("formation_config/robot_names", formation_robots, formation_robots);
@@ -72,7 +72,6 @@ void SplinedVoronoiPlanner::initialize(std::string name, costmap_2d::Costmap2DRO
         for (int i = 0; i < formation_robots.size(); i++)
         {
             std::string robot_namespace = formation_robots[i];
-            ROS_INFO_STREAM("Got robot namespace: " << robot_namespace);
             robot_names.push_back(robot_namespace);
             double rel_x_offset = 0.0;
             double rel_y_offset = 0.0;
@@ -80,9 +79,7 @@ void SplinedVoronoiPlanner::initialize(std::string name, costmap_2d::Costmap2DRO
             private_nh.param("formation_config" + robot_namespace + "/rel_x_offset", rel_x_offset, rel_x_offset);
             private_nh.param("formation_config" + robot_namespace + "/rel_y_offset", rel_y_offset, rel_y_offset);
             private_nh.param("formation_config" + robot_namespace + "/rel_yaw_offset", rel_yaw_offset, rel_yaw_offset);
-            ROS_INFO_STREAM("Got x offset: " << rel_x_offset);
-            ROS_INFO_STREAM("Got y offset: " << rel_y_offset);
-            ROS_INFO_STREAM("Got yaw offset: " << rel_yaw_offset);
+            ROS_INFO_STREAM("Robot namespace " << robot_namespace << " : Offset (" << rel_x_offset << ", " << rel_y_offset << ")");
             this->robot_formation_.push_back({rel_x_offset, rel_y_offset});
             if (get_curvature_from_formation)
             {
@@ -267,16 +264,13 @@ bool SplinedVoronoiPlanner::makePlan(const geometry_msgs::PoseStamped& start, co
 
     std::chrono::steady_clock::time_point coordinate_transform_time = std::chrono::steady_clock::now();
     double coord_trans_duration = (std::chrono::duration_cast<std::chrono::microseconds>(coordinate_transform_time - begin).count()) / 1000000.0;
-    ROS_INFO_STREAM("SplinedVoronoiPlanner: Time for start and goal coordinate transforms (s): " << coord_trans_duration);
+    // ROS_INFO_STREAM("SplinedVoronoiPlanner: Time for start and goal coordinate transforms (s): " << coord_trans_duration);
 
     this->costmap_size_x_ = this->costmap_->getSizeInCellsX();
     this->costmap_size_y_ = this->costmap_->getSizeInCellsY();
     cv::Mat costmap_img_orig = cv::Mat::zeros(this->costmap_size_x_, this->costmap_size_y_, CV_8UC1);
     cv::Mat costmap_img_wo_unknowns = cv::Mat::zeros(this->costmap_size_x_, this->costmap_size_y_, CV_8UC1);
     int obstacle_count = 0;
-    double max_val = 0;
-    double min_val = 255;
-    std::vector<double> values_used;
     int unknown_counter = 0;
     for (int i = 0; i < this->costmap_size_x_; i++)
     {
@@ -295,14 +289,7 @@ bool SplinedVoronoiPlanner::makePlan(const geometry_msgs::PoseStamped& start, co
             }
         }
     }
-    ROS_WARN_STREAM("Max Cost: " << max_val << ", min cost: " << min_val);
-    std::sort(values_used.begin(), values_used.end());
-    for (auto val : values_used)
-    {
-        std::cout << val << ", ";
-    }
-    std::cout << std::endl;
-    ROS_WARN_STREAM("Unknowns: " << unknown_counter << ", value: " << costmap_2d::NO_INFORMATION);
+    // ROS_WARN_STREAM("Unknowns: " << unknown_counter << ", value: " << costmap_2d::NO_INFORMATION);
     // enlargen obstacles by formation radius
     cv::Mat costmap_dist_img;
     cv::distanceTransform(~costmap_img_orig, costmap_dist_img, cv::DIST_L2, 3, CV_8UC1);
@@ -331,7 +318,7 @@ bool SplinedVoronoiPlanner::makePlan(const geometry_msgs::PoseStamped& start, co
 
     std::chrono::steady_clock::time_point costmap_as_img_time = std::chrono::steady_clock::now();
     double costmap_as_img_duration = (std::chrono::duration_cast<std::chrono::microseconds>(costmap_as_img_time - coordinate_transform_time).count()) / 1000000.0;
-    ROS_INFO_STREAM("SplinedVoronoiPlanner: Time taken for putting costmap in image (s): " << costmap_as_img_duration);
+    // ROS_INFO_STREAM("SplinedVoronoiPlanner: Time taken for putting costmap in image (s): " << costmap_as_img_duration);
 
     // generate voronoi representation of map only when there are obstacles
     if (obstacle_count == 0)
@@ -346,7 +333,7 @@ bool SplinedVoronoiPlanner::makePlan(const geometry_msgs::PoseStamped& start, co
 
     std::chrono::steady_clock::time_point voronoi_generation_time = std::chrono::steady_clock::now();
     double voronoi_generation_duration = (std::chrono::duration_cast<std::chrono::microseconds>(voronoi_generation_time - costmap_as_img_time).count()) / 1000000.0;
-    ROS_INFO_STREAM("SplinedVoronoiPlanner: Time taken for generating voronoi image (s): " << voronoi_generation_duration);
+    ROS_INFO_STREAM("SplinedVoronoiPlanner: Time for generating voronoi img (s): " << voronoi_generation_duration);
 
     // get areas with large freespaces and overly voronoi diagram with it
     cv::Mat costmap_large_spaces;
@@ -383,7 +370,7 @@ bool SplinedVoronoiPlanner::makePlan(const geometry_msgs::PoseStamped& start, co
     voronoi_map_pub_.publish(voronoi_map);
     std::chrono::steady_clock::time_point voronoi_map_time = std::chrono::steady_clock::now();
     double voronoi_map_duration = (std::chrono::duration_cast<std::chrono::milliseconds>(voronoi_map_time - voronoi_generation_time).count()) / 1000.0;
-    ROS_INFO_STREAM("SplinedVoronoiPlanner: Time taken for putting voronoi image in map (s): " << voronoi_map_duration);
+    ROS_INFO_STREAM("SplinedVoronoiPlanner: Time for generating voronoi map (s): " << voronoi_map_duration);
 
     // get path on voronoi image
     std::vector<cv::Point2i> path;
@@ -433,7 +420,7 @@ bool SplinedVoronoiPlanner::makePlan(const geometry_msgs::PoseStamped& start, co
 
     std::chrono::steady_clock::time_point plan_creating_time = std::chrono::steady_clock::now();
     double plan_creating_duration = (std::chrono::duration_cast<std::chrono::microseconds>(plan_creating_time - path_finding_time).count()) / 1000000.0;
-    ROS_INFO_STREAM("SplinedVoronoiPlanner: Time taken to create plan from path (s): " << plan_creating_duration);
+    // ROS_INFO_STREAM("SplinedVoronoiPlanner: Time taken to create plan from path (s): " << plan_creating_duration);
 
     std::vector<double> tangent_lengths;
     std::vector<cv::Point2d> spline_samples_initial;
@@ -447,7 +434,8 @@ bool SplinedVoronoiPlanner::makePlan(const geometry_msgs::PoseStamped& start, co
     std::vector<cv::Point2d> optimized_sparse_path;
     std::vector<double> optimized_lengths;
     bool splining_success = path_smoothing::buildOptimizedContinuousPath(sparse_path_world, continuous_path, optimized_sparse_path, optimized_lengths, *(this->costmap_), this->obstacle_img_wo_unknowns_, this->max_curvature_, this->plan_resolution_, this->optimize_lengths_, this->max_optimization_time_);
-    ROS_INFO_STREAM("Optimization Status: " << splining_success);
+    std::string splining_status_msg = splining_success ? "Success" : "Failure";
+    ROS_INFO_STREAM("Optimization Status: " << splining_status_msg);
     std_msgs::Float64MultiArray optimized_lengths_msg;
     optimized_lengths_msg.data = optimized_lengths;
     optimized_lengths_pub_.publish(optimized_lengths_msg);
