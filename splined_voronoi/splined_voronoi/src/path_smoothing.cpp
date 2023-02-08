@@ -384,15 +384,32 @@ void get_optimize_indices(const std::vector<cv::Point2d>& points, const std::vec
         {
             optimize_indices.push_back(idx + 1);
             ROS_INFO_STREAM_COND(print_output, "Segment " << idx + 1 << " needs optimization with curvature " << max_curvature);
+            if (std::find(optimize_lengths_indices.begin(), optimize_lengths_indices.end(), idx) == optimize_lengths_indices.end())
+            {
+                optimize_lengths_indices.push_back(idx);
+            }
+            if (std::find(optimize_lengths_indices.begin(), optimize_lengths_indices.end(), idx + 1) == optimize_lengths_indices.end())
+            {
+                optimize_lengths_indices.push_back(idx + 1);
+            }
         }
         else if (max_cost_seg > 254.0)
         {
             optimize_indices.push_back(idx + 1);
             ROS_INFO_STREAM_COND(print_output, "Segment " << idx + 1 << " needs optimization due to collision.");
+            if (std::find(optimize_lengths_indices.begin(), optimize_lengths_indices.end(), idx) == optimize_lengths_indices.end())
+            {
+                optimize_lengths_indices.push_back(idx);
+            }
+            if (std::find(optimize_lengths_indices.begin(), optimize_lengths_indices.end(), idx + 1) == optimize_lengths_indices.end())
+            {
+                optimize_lengths_indices.push_back(idx + 1);
+            }
         }
         else
         {
             // ROS_INFO_STREAM_COND(print_output, "Segment " << idx + 1 << " does not need optimization with curvature " << max_curvature);
+            /*
             bool idx_in_optimize = std::find(optimize_indices.begin(), optimize_indices.end(), idx) != optimize_indices.end();
             bool idx_already_contained = std::find(optimize_lengths_indices.begin(), optimize_lengths_indices.end(), idx) != optimize_lengths_indices.end();
             bool next_idx_already_contained = std::find(optimize_lengths_indices.begin(), optimize_lengths_indices.end(), idx + 1) != optimize_lengths_indices.end();
@@ -404,6 +421,7 @@ void get_optimize_indices(const std::vector<cv::Point2d>& points, const std::vec
             {
                 optimize_lengths_indices.push_back(idx + 1);
             }
+            */
         }
     }
 }
@@ -414,14 +432,12 @@ double deviationPoints(const std::vector<double> &x, std::vector<double> &grad, 
     specific_points_optim_data* optim_data = reinterpret_cast<specific_points_optim_data*>(data);
 
     int begin_lengths_index = optim_data->optimize_indices.size() * 2;
-    std::vector<double> lengths;
+    std::vector<double> lengths_orig(optim_data->points_orig.size() - 1, optim_data->default_length);
+    std::vector<double> lengths(lengths_orig);
     if (optim_data->optimize_lengths)
     {
-        lengths = std::vector<double>(x.begin() + begin_lengths_index, x.end());
-    }
-    else
-    {
-        lengths = std::vector<double>(optim_data->points_orig.size() - 1, optim_data->default_length); // default length
+        std::vector<double> lengths_opt = std::vector<double>(x.begin() + begin_lengths_index, x.end());
+        replaceValsInVec(lengths_opt, lengths_orig, optim_data->optimize_lengths_indices, lengths);
     }
     std::vector<double> points_flattened = std::vector<double>(x.begin(), x.begin() + begin_lengths_index);
     std::vector<cv::Point2d> points = vecToPoints(points_flattened);
@@ -447,14 +463,12 @@ double maxCostOfPath(const std::vector<double> &x, std::vector<double> &grad, vo
     specific_points_optim_data *constraint_data = reinterpret_cast<specific_points_optim_data*>(data);
 
     int begin_lengths_index = constraint_data->optimize_indices.size() * 2;
-    std::vector<double> lengths;
+    std::vector<double> lengths_orig(constraint_data->points_orig.size() - 1, constraint_data->default_length);
+    std::vector<double> lengths(lengths_orig);
     if (constraint_data->optimize_lengths)
     {
-        lengths = std::vector<double>(x.begin() + begin_lengths_index, x.end());
-    }
-    else
-    {
-        lengths = std::vector<double>(constraint_data->points_orig.size() - 1, constraint_data->default_length); // default length
+        std::vector<double> lengths_opt = std::vector<double>(x.begin() + begin_lengths_index, x.end());
+        replaceValsInVec(lengths_opt, lengths_orig, constraint_data->optimize_lengths_indices, lengths);
     }
     std::vector<double> points_flattened = std::vector<double>(x.begin(), x.begin() + begin_lengths_index);
     std::vector<cv::Point2d> points = vecToPoints(points_flattened);
@@ -507,14 +521,12 @@ double maxCurvatureFromPoints(const std::vector<double> &x, std::vector<double> 
     specific_points_optim_data *constraint_data = reinterpret_cast<specific_points_optim_data*>(data);
     int begin_lengths_index = constraint_data->optimize_indices.size() * 2;
     // std::vector<double> lengths = std::vector<double>(x.begin() + begin_lengths_index, x.end());
-    std::vector<double> lengths;
+    std::vector<double> lengths_orig(constraint_data->points_orig.size() - 1, constraint_data->default_length);
+    std::vector<double> lengths(lengths_orig);
     if (constraint_data->optimize_lengths)
     {
-        lengths = std::vector<double>(x.begin() + begin_lengths_index, x.end());
-    }
-    else
-    {
-        lengths = std::vector<double>(constraint_data->points_orig.size() - 1, constraint_data->default_length); // default length
+        std::vector<double> lengths_opt = std::vector<double>(x.begin() + begin_lengths_index, x.end());
+        replaceValsInVec(lengths_opt, lengths_orig, constraint_data->optimize_lengths_indices, lengths);
     }
     std::vector<double> points_flattened = std::vector<double>(x.begin(), x.begin() + begin_lengths_index);
     std::vector<cv::Point2d> points = vecToPoints(points_flattened);
@@ -564,6 +576,12 @@ double maxCurvatureFromPoints(const std::vector<double> &x, std::vector<double> 
 
 double combinedMinFunction(const std::vector<double> &x, std::vector<double> &grad, void *data)
 {
+    std::string curr_vals_msg = "";
+    for (auto val: x)
+    {
+        curr_vals_msg += std::to_string(val) + " ";
+    }
+    ROS_INFO_STREAM("Current values: " << curr_vals_msg);
     std::chrono::steady_clock::time_point start_min_func = std::chrono::steady_clock::now();
     specific_points_optim_data *optim_data = reinterpret_cast<specific_points_optim_data*>(data);
     double distance_to_orig = deviationPoints(x, grad, data);
@@ -600,7 +618,7 @@ double combinedMinFunction(const std::vector<double> &x, std::vector<double> &gr
     return distance_to_orig + curvature_penalty + cost_penalty;
 }
 
-int optimizeSpecificPoints(const std::vector<cv::Point2d>& points_orig, const std::vector<int>& optimize_indices, std::vector<cv::Point2d>& points_out, std::vector<double>& lengths_out, const costmap_2d::Costmap2D& costmap, const cv::Mat& costmap_img, double curve_max, bool optimize_lengths, double default_length, double max_optimization_time)
+int optimizeSpecificPoints(const std::vector<cv::Point2d>& points_orig, const std::vector<int>& optimize_indices, const std::vector<int>& optimize_lengths_indices, std::vector<cv::Point2d>& points_out, std::vector<double>& lengths_out, const costmap_2d::Costmap2D& costmap, const cv::Mat& costmap_img, double curve_max, bool optimize_lengths, double default_length, double max_optimization_time)
 {
     ROS_INFO("Start optimizing of Points");
     double eps = 0.00001;
@@ -609,12 +627,12 @@ int optimizeSpecificPoints(const std::vector<cv::Point2d>& points_orig, const st
     // create additional data
     std::vector<int> adaptive_optimize_indices = std::vector<int>(optimize_indices.begin(), optimize_indices.end());
     std::vector<double> res_vals;
-    specific_points_optim_data optim_data{points_orig, adaptive_optimize_indices, costmap, costmap_img, curve_max, max_optimization_time, start_time, optimize_lengths, default_length, false, res_vals};
+    specific_points_optim_data optim_data{points_orig, adaptive_optimize_indices, costmap, costmap_img, curve_max, max_optimization_time, start_time, optimize_lengths, default_length, false, res_vals, optimize_lengths_indices};
 
     int len_opt = optimize_indices.size() * 2;
     if (optimize_lengths)
     {
-        len_opt += points_orig.size() - 1;
+        len_opt += optimize_lengths_indices.size();
     }
     nlopt::opt opt(nlopt::LN_NEWUOA, len_opt);
     cv::Point2i map_top_left(costmap.getSizeInCellsX() - 1, costmap.getSizeInCellsY() - 1);
@@ -638,7 +656,7 @@ int optimizeSpecificPoints(const std::vector<cv::Point2d>& points_orig, const st
     }
     if (optimize_lengths)
     {
-        for (int i = 0; i < points_orig.size() - 1; i++)
+        for (int i = 0; i < optimize_lengths_indices.size(); i++)
         {
             lower_bounds.push_back(0.0);
             upper_bounds.push_back(10.0);
@@ -658,7 +676,7 @@ int optimizeSpecificPoints(const std::vector<cv::Point2d>& points_orig, const st
     std::vector<double> points_to_optim_flattened = pointsToVec(points_to_optim);
     if (optimize_lengths)
     {
-        for (int i = 0; i < points_orig.size() - 1; i++)
+        for (int i = 0; i < optimize_lengths_indices.size(); i++)
         {
             points_to_optim_flattened.push_back(default_length); // default length
         }
@@ -697,6 +715,7 @@ int optimizeSpecificPoints(const std::vector<cv::Point2d>& points_orig, const st
     }
 
     int begin_lengths_index = optimize_indices.size() * 2;
+    /*
     if (optimize_lengths)
     {
         lengths_out = std::vector<double>(points_to_optim_flattened.begin() + begin_lengths_index, points_to_optim_flattened.end());
@@ -706,6 +725,15 @@ int optimizeSpecificPoints(const std::vector<cv::Point2d>& points_orig, const st
     {
         lengths_out = std::vector<double>(points_orig.size() - 1, default_length); // default length
     }
+    */
+    std::vector<double> lengths_orig(points_orig.size() - 1, default_length);
+    lengths_out = lengths_orig;
+    if (optimize_lengths)
+    {
+        std::vector<double> lengths_opt = std::vector<double>(points_to_optim_flattened.begin() + begin_lengths_index, points_to_optim_flattened.end());
+        replaceValsInVec(lengths_opt, lengths_orig, optimize_lengths_indices, lengths_out);
+    }
+
     std::vector<double> points_flattened = std::vector<double>(points_to_optim_flattened.begin(), points_to_optim_flattened.begin() + begin_lengths_index);
     std::vector<cv::Point2d> points_res = vecToPoints(points_flattened);
     for (auto point: points_res)
@@ -745,12 +773,10 @@ int optimizeSplinePath(const std::vector<cv::Point2d>& points, std::vector<cv::P
         opt_ind_output += std::to_string(optimize_indices.at(i)) + " ";
     ROS_INFO_STREAM(opt_ind_output);
 
-    /*
-    std::cout << "Optimize length indices: ";
-    for (int i = 0; i < optimize_lengths_indices.size(); i++)
-        std::cout << optimize_lengths_indices.at(i) << " ";
-    std::cout << std::endl;
-    */
+    std::string opt_length_ind_output = "Optimize lengths indices: ";
+    for (auto idx : optimize_lengths_indices)
+        opt_length_ind_output += std::to_string(idx) + " ";
+    ROS_INFO_STREAM(opt_length_ind_output);
 
     double default_length_1 = 0.5;
     double default_length_2 = 0.25;
@@ -772,7 +798,7 @@ int optimizeSplinePath(const std::vector<cv::Point2d>& points, std::vector<cv::P
         {
             optimize_indices.clear();
         }
-        optimize_success = optimizeSpecificPoints(points, optimize_indices, res_points, lengths_out, costmap, costmap_img, curve_max, optimize_lengths, default_length, max_optimization_time);
+        optimize_success = optimizeSpecificPoints(points, optimize_indices, optimize_lengths_indices, res_points, lengths_out, costmap, costmap_img, curve_max, optimize_lengths, default_length, max_optimization_time);
         replaceValsInVec(res_points, points, optimize_indices, optimized_points);
         // TODO: check complete path for curvature
         if (optimize_success != OptimizationStatus::Failure)

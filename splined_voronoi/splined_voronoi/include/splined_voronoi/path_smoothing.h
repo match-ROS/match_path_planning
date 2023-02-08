@@ -43,6 +43,7 @@ typedef struct {
     double default_length;
     bool was_terminated;
     std::vector<double>& best_result;
+    const std::vector<int>& optimize_lengths_indices;
 } specific_points_optim_data;
 
 /**
