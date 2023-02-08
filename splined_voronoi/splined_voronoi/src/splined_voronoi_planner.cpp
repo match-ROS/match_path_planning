@@ -473,7 +473,7 @@ bool SplinedVoronoiPlanner::makePlan(const geometry_msgs::PoseStamped& start, co
     if (!path_planning::isPlanFree(costmap_, free_cell_threshold_, splined_plan))
     {
         ROS_ERROR("Plan is not free!");
-        return false;
+        // return false;
     }
     std::chrono::steady_clock::time_point free_check_time = std::chrono::steady_clock::now();
     ROS_INFO_STREAM(
