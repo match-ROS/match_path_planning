@@ -337,7 +337,7 @@ bool SplinedVoronoiPlanner::makePlan(const geometry_msgs::PoseStamped& start, co
 
     // get areas with large freespaces and overly voronoi diagram with it
     cv::Mat costmap_large_spaces;
-    cv::threshold(costmap_img_orig, costmap_large_spaces, this->free_space_factor_  / this->costmap_resolution_, 255, cv::THRESH_BINARY);
+    cv::threshold(costmap_dist_img, costmap_large_spaces, this->free_space_factor_  / this->costmap_resolution_, 255, cv::THRESH_BINARY);
     costmap_large_spaces.convertTo(costmap_large_spaces, CV_8UC1);
     cv::bitwise_or(this->voronoi_img_, costmap_large_spaces, this->voronoi_img_);
 
