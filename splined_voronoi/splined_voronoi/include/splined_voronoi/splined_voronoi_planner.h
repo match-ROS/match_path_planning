@@ -102,6 +102,7 @@ public:
 private:
     bool initialized_;
     bool optimize_lengths_;
+    bool perform_splining_;
     std::shared_ptr<costmap_2d::Costmap2D> costmap_;
     std::string costmap_global_frame_;
     cv::Point2d map_origin_;
