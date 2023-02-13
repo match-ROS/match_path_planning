@@ -117,9 +117,9 @@ float calcGCost(float current_cell_g_cost, cv::Point2i current_cell, cv::Point2i
     return current_cell_g_cost + calcHCost(current_cell, target_cell, true);
 }
 
-float calcFCost(float current_cell_g_score, cv::Point2i current_cell, cv::Point2i target_cell, cv::Point2i goal_cell)
+float calcFCost(float current_cell_g_score, cv::Point2i current_cell, cv::Point2i target_cell, cv::Point2i goal_cell, bool use_euclidean = true)
 {
-    return calcGCost(current_cell_g_score, current_cell, target_cell) + calcHCost(target_cell, goal_cell, false);
+    return calcGCost(current_cell_g_score, current_cell, target_cell) + calcHCost(target_cell, goal_cell, use_euclidean);
 }
 
 bool findRelaxedAStarPathOnImage(const cv::Mat& voronoi_map, std::vector<cv::Point2i>& out_path, cv::Point2i start,
@@ -268,43 +268,46 @@ bool findAStarPathOnImage(const cv::Mat& voronoi_map, std::vector<cv::Point2i>& 
     cv::Mat g_score(voronoi_map.size(), CV_32FC1, std::numeric_limits<float>::infinity());
     g_score.at<float>(start.x, start.y) = 0;
     cv::Mat reached_with_delta_index(voronoi_map.size(), CV_8UC1, cv::Scalar(255));
+    cv::Mat visited(voronoi_map.size(), CV_8UC1, cv::Scalar(0));
+    visited.at<uchar>(start.x, start.y) = 255;
     // vector of open cells (for possible expansion) nodes
-    std::vector<std::tuple<float, int, int>> open_cells;
-    open_cells.push_back(std::make_tuple(calcHCost(start, goal, false), start.x, start.y));
+    std::multiset<AStarCell, std::less<AStarCell>> array_open_cell_list;
+    array_open_cell_list.insert({ start, calcHCost(start, goal, true) });
 
     // path found flag
     bool found_goal = false;
+    std::chrono::steady_clock::time_point begin = std::chrono::steady_clock::now();
     while (!found_goal)
     {
-        if (open_cells.size() == 0)
+        if (array_open_cell_list.size() == 0)
         {
             ROS_ERROR("No connection on voronoi found");
             return false;
         }
-        // sort open by cost
-        std::sort(open_cells.begin(), open_cells.end());
-        std::reverse(open_cells.begin(), open_cells.end());
         // get node with lowest cost
-        std::tuple<float, int, int> next = open_cells[open_cells.size() - 1];
-        open_cells.pop_back();
-        float current_gscore = std::get<0>(next);
-        cv::Point2i current_cell(std::get<1>(next), std::get<2>(next));
-
+        cv::Point2i current_cell = array_open_cell_list.begin()->pixel;
+        array_open_cell_list.erase(array_open_cell_list.begin());
+        float current_gscore = g_score.at<float>(current_cell.x, current_cell.y);
+        // ROS_INFO_STREAM("len of open cells: " << array_open_cell_list.size());
         closed_list.push_back(current_cell);
+        visited.at<uchar>(current_cell.x, current_cell.y) = 255;
 
         if (current_cell.x == goal.x && current_cell.y == goal.y)
         {
+            ROS_INFO("Found goal with A*");
             found_goal = true;
-            continue;
+            break;
         }
 
         for (int i = 0; i < deltas.size(); i++)
         {
             cv::Point2i neighbor_cell = current_cell + deltas[i];
+            /*
             if (std::find(closed_list.begin(), closed_list.end(), neighbor_cell) != closed_list.end())
             {
                 continue;
             }
+            */
             bool is_inside_img = neighbor_cell.x >= 0 && neighbor_cell.x < voronoi_map.rows && neighbor_cell.y >= 0 &&
                                  neighbor_cell.y < voronoi_map.cols;
             if (!is_inside_img)
@@ -317,41 +320,68 @@ bool findAStarPathOnImage(const cv::Mat& voronoi_map, std::vector<cv::Point2i>& 
                 continue;
             }
             float neighbor_g_score = calcGCost(current_gscore, current_cell, neighbor_cell);
-            float neighbor_f_score = calcFCost(current_gscore, current_cell, neighbor_cell, goal);
-            std::tuple<float, int, int> neighbor_tuple = {neighbor_f_score, neighbor_cell.x, neighbor_cell.y};
-            if (g_score.at<float>(neighbor_cell.x, neighbor_cell.y) == std::numeric_limits<float>::infinity())
+            float neighbor_f_score = calcFCost(current_gscore, current_cell, neighbor_cell, goal, true);
+            // std::tuple<float, int, int> neighbor_tuple = {neighbor_f_score, neighbor_cell.x, neighbor_cell.y};
+            if (g_score.at<float>(neighbor_cell.x, neighbor_cell.y) == std::numeric_limits<float>::infinity() || neighbor_g_score < g_score.at<float>(neighbor_cell.x, neighbor_cell.y))
             {
                 g_score.at<float>(neighbor_cell.x, neighbor_cell.y) = neighbor_g_score;
-                open_cells.push_back(neighbor_tuple);
+                array_open_cell_list.insert({neighbor_cell, neighbor_f_score});
                 reached_with_delta_index.at<uchar>(neighbor_cell.x, neighbor_cell.y) = i;
             }
+            /*
             else if(neighbor_g_score < g_score.at<float>(neighbor_cell.x, neighbor_cell.y))
             {
                 // better value found, replace
-                auto it = std::find_if(open_cells.begin(), open_cells.end(), [&](const std::tuple<float, int, int>& e) {return std::get<1>(e) == neighbor_cell.x && std::get<2>(e) == neighbor_cell.y;});
-                if (it != open_cells.end()) {
-                    std::cout << "Found" << std::endl;
-                    int point_idx = it - open_cells.begin();
-                    open_cells.at(point_idx) = neighbor_tuple;
+                auto it = std::find_if(array_open_cell_list.begin(), array_open_cell_list.end(), [&](const AStarCell& e) {return e.pixel == neighbor_cell;});
+                if (it != array_open_cell_list.end()) {
+                    // std::cout << "Found" << std::endl;
+                    array_open_cell_list.erase(it);
+                    g_score.at<float>(neighbor_cell.x, neighbor_cell.y) = neighbor_g_score;
+                    array_open_cell_list.insert({neighbor_cell, neighbor_f_score});
+                    reached_with_delta_index.at<uchar>(neighbor_cell.x, neighbor_cell.y) = i;
                 }
-                else
-                {
-                    open_cells.push_back(neighbor_tuple);
-                }
-                reached_with_delta_index.at<uchar>(neighbor_cell.x, neighbor_cell.y) = i;
+                // reached_with_delta_index.at<uchar>(neighbor_cell.x, neighbor_cell.y) = i;
             }
+            */
         }
     }
+    ROS_INFO("Filling gscore done");
+    std::chrono::steady_clock::time_point gscore_done = std::chrono::steady_clock::now();
+    double gscore_duration = (std::chrono::duration_cast<std::chrono::microseconds>(gscore_done - begin).count()) / 1000000.0;
+    ROS_INFO_STREAM("Iteration took (s): " << gscore_duration);
+    ROS_INFO("Trace back path");
     out_path.clear();
+    out_path.push_back(goal);
     cv::Point2i current_cell = goal;
     while (!((current_cell.x == start.x) && (current_cell.y == start.y)))
     {
-        out_path.push_back(current_cell);
-        current_cell - deltas[reached_with_delta_index.at<uchar>(current_cell.x, current_cell.y)];
+        cv::Point2i min_g_score_cell = current_cell;
+        ROS_DEBUG_STREAM("Current cell: " << current_cell);
+        for (auto delta : deltas)
+        {
+            cv::Point2i neighbor_cell = current_cell + delta;
+            ROS_DEBUG_STREAM("Neighbor cell: " << neighbor_cell);
+            bool is_inside_img = neighbor_cell.x >= 0 && neighbor_cell.x < voronoi_map.rows && neighbor_cell.y >= 0 &&
+                                 neighbor_cell.y < voronoi_map.cols;
+            if (!is_inside_img)
+            {
+                ROS_DEBUG("Skipped cos not within map");
+                continue;
+            }
+            bool is_free = voronoi_map.at<uchar>(neighbor_cell.x, neighbor_cell.y) == 255;
+            if (!is_free)
+            {
+                ROS_DEBUG("Skipped cos not on voronoi");
+                continue;
+            }
+            if (g_score.at<float>(min_g_score_cell.x, min_g_score_cell.y) > g_score.at<float>(neighbor_cell.x, neighbor_cell.y))
+            {
+                min_g_score_cell = neighbor_cell;
+            }
+        }
+        out_path.push_back(min_g_score_cell);
+        current_cell = min_g_score_cell;
     }
-    ROS_DEBUG("reversing path");
-    std::reverse(out_path.begin(), out_path.end());
-    ROS_DEBUG("Done");
     return true;
 }
 
