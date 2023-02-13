@@ -152,19 +152,20 @@ bool findRelaxedAStarPathOnImage(const cv::Mat& voronoi_map, std::vector<cv::Poi
     std::multiset<AStarCell, std::less<AStarCell>> array_open_cell_list;
     array_open_cell_list.insert({ start, calcHCost(start, goal, false) });
 
-    std::vector<std::tuple<float, int, int>> open_cells;
-    open_cells.push_back(std::make_tuple(calcHCost(start, goal, false), start.x, start.y));
+    // std::vector<std::tuple<float, int, int>> open_cells;
+    // open_cells.push_back(std::make_tuple(calcHCost(start, goal, false), start.x, start.y));
 
     ROS_DEBUG("Creating g score array");
     int loop_counter = 0;
 
     bool timeout = false;
-    double max_runtime = 1.0;
+    double max_runtime = 4.0;
     std::chrono::steady_clock::time_point start_time = std::chrono::steady_clock::now();
-    while (!open_cells.empty() && g_score.at<float>(goal.x, goal.y) == std::numeric_limits<float>::infinity() && !timeout)
+    while (!array_open_cell_list.empty() && g_score.at<float>(goal.x, goal.y) == std::numeric_limits<float>::infinity() && !timeout)
     {
         loop_counter++;
 
+        /*
         std::sort(open_cells.begin(), open_cells.end());
         std::reverse(open_cells.begin(), open_cells.end());
         // get node with lowest cost
@@ -172,11 +173,12 @@ bool findRelaxedAStarPathOnImage(const cv::Mat& voronoi_map, std::vector<cv::Poi
         open_cells.pop_back();
         float current_gscore = std::get<0>(next);
         cv::Point2i current_cell(std::get<1>(next), std::get<2>(next));
+        */
 
         // Get cell with lowest f_score and remove it so it will not be visited again
-        // cv::Point2i current_cell = array_open_cell_list.begin()->pixel;
-        // array_open_cell_list.erase(array_open_cell_list.begin());
-        // float current_gscore = g_score.at<float>(current_cell.x, current_cell.y);
+        cv::Point2i current_cell = array_open_cell_list.begin()->pixel;
+        array_open_cell_list.erase(array_open_cell_list.begin());
+        float current_gscore = g_score.at<float>(current_cell.x, current_cell.y);
         // get all free neighbors
         for (auto delta : deltas)
         {
@@ -197,9 +199,9 @@ bool findRelaxedAStarPathOnImage(const cv::Mat& voronoi_map, std::vector<cv::Poi
             if (g_score.at<float>(neighbor_cell.x, neighbor_cell.y) == std::numeric_limits<float>::infinity())
             {
                 g_score.at<float>(neighbor_cell.x, neighbor_cell.y) = calcGCost(current_gscore, current_cell, neighbor_cell);
-                open_cells.push_back(std::make_tuple(calcFCost(current_gscore, current_cell, neighbor_cell, goal), neighbor_cell.x, neighbor_cell.y));
-                // array_open_cell_list.insert(
-                //     { neighbor_cell, calcFCost(current_gscore, current_cell, neighbor_cell, goal) });
+                // open_cells.push_back(std::make_tuple(calcFCost(current_gscore, current_cell, neighbor_cell, goal), neighbor_cell.x, neighbor_cell.y));
+                array_open_cell_list.insert(
+                    { neighbor_cell, calcFCost(current_gscore, current_cell, neighbor_cell, goal) });
             }
         }
         std::chrono::steady_clock::time_point end_loop_time = std::chrono::steady_clock::now();
@@ -435,7 +437,7 @@ bool findCompletePath(const cv::Mat& obstacle_img, const cv::Mat& voronoi_img, s
                             .count()) /
                            1000000.0);
     // find path on voronoi
-    bool on_voronoi_success = findAStarPathOnImage(voronoi_img, path, start_on_voronoi, goal_on_voronoi, true);
+    bool on_voronoi_success = findRelaxedAStarPathOnImage(voronoi_img, path, start_on_voronoi, goal_on_voronoi, true);
 
     std::chrono::steady_clock::time_point path_complete_time = std::chrono::steady_clock::now();
     ROS_INFO_STREAM(
@@ -449,6 +451,8 @@ bool findCompletePath(const cv::Mat& obstacle_img, const cv::Mat& voronoi_img, s
         ROS_ERROR("Failed to find path on voronoi");
         return false;
     }
+    // path.emplace(path.begin(), start);
+    // path.push_back(goal);
     return true;
 }
 

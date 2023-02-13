@@ -44,6 +44,7 @@ typedef struct {
     bool was_terminated;
     std::vector<double>& best_result;
     const std::vector<int>& optimize_lengths_indices;
+    // ros::NodeHandle& nh;
 } specific_points_optim_data;
 
 /**

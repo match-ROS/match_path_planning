@@ -59,33 +59,41 @@ int main(int argc, char**argv)
     {
         ROS_INFO("Ready for planning!");
         // subscribe to start pose
+        /*
         boost::shared_ptr<geometry_msgs::PoseWithCovarianceStamped const> start_pose_ptr;
         geometry_msgs::PoseWithCovarianceStamped start_pose_with_cov;
         start_pose_ptr = ros::topic::waitForMessage<geometry_msgs::PoseWithCovarianceStamped>("/initialpose", nh);
         if(start_pose_ptr != NULL){
             start_pose_with_cov = *start_pose_ptr;
         }
+        */
         geometry_msgs::PoseStamped start_pose;
-        start_pose.header = start_pose_with_cov.header;
-        start_pose.pose = start_pose_with_cov.pose.pose;
-        start_pose.pose.position.x = -74.25;
-        start_pose.pose.position.y = -0.5;
-        start_pose.pose.orientation.z = 0;
+        // start_pose.header = start_pose_with_cov.header;
+        // start_pose.pose = start_pose_with_cov.pose.pose;
+        start_pose.header.frame_id = "map";
         start_pose.pose.orientation.w = 1;
+        start_pose.pose.position.x = 10.028;
+        start_pose.pose.position.y = 10.7379;
         ROS_INFO_STREAM("Start pose: " << start_pose.pose.position.x << ", " << start_pose.pose.position.y);
-
+        // [10.028, 10.7379] to [-12.5606, -6.31814]
         // subscribe to goal pose
-        boost::shared_ptr<geometry_msgs::PoseStamped const> goal_pose_ptr;
         geometry_msgs::PoseStamped goal_pose;
+        /*
+        boost::shared_ptr<geometry_msgs::PoseStamped const> goal_pose_ptr;
         goal_pose_ptr = ros::topic::waitForMessage<geometry_msgs::PoseStamped>("/move_base_simple/goal", nh);
         if(goal_pose_ptr != NULL){
             goal_pose = *goal_pose_ptr;
         }
-        goal_pose.pose = start_pose.pose;
+        */
+        goal_pose.header.frame_id = "map";
+        goal_pose.pose.orientation.w = 1;
+        goal_pose.pose.position.x = -12.5606;
+        goal_pose.pose.position.y = -6.31814;
         ROS_INFO_STREAM("Goal pose: " << goal_pose.pose.position.x << ", " << goal_pose.pose.position.y);
 
         std::vector<geometry_msgs::PoseStamped> path;
         global_planner.makePlan(start_pose, goal_pose, path);
+        break;
     }
 
 	return 0;
