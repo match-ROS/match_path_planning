@@ -33,8 +33,8 @@ int findDijkstraPathToVoronoi(const cv::Mat& obstacle_map, const cv::Mat& vorono
     int movement_cost = 1;  // doesnt matter in which direction or angle, one cell movement costs 1
 
     // vector of open cells (for possible expansion) nodes
-    std::vector<std::tuple<float, int, int>> open_cells;
-    open_cells.push_back(std::make_tuple(g, start.x, start.y));
+    std::multiset<AStarCell, std::less<AStarCell>> array_open_cell_list;
+    array_open_cell_list.insert({ start, g});
 
     // path found flag
     bool found_goal = false;
@@ -43,19 +43,15 @@ int findDijkstraPathToVoronoi(const cv::Mat& obstacle_map, const cv::Mat& vorono
 
     while (!found_goal && !resign)
     {
-        if (open_cells.size() == 0)
+        if (array_open_cell_list.size() == 0)
         {
             return PlanningStatus::Failed;
         }
-        // sort open by cost
-        std::sort(open_cells.begin(), open_cells.end());
-        std::reverse(open_cells.begin(), open_cells.end());
         // get node with lowest cost
-        std::tuple<float, int, int> next = open_cells[open_cells.size() - 1];
-        open_cells.pop_back();
-        g = std::get<0>(next);
-        int curr_cell_x = std::get<1>(next);
-        int curr_cell_y = std::get<2>(next);
+        int curr_cell_x = array_open_cell_list.begin()->pixel.x;
+        int curr_cell_y = array_open_cell_list.begin()->pixel.y;
+        g = array_open_cell_list.begin()->f_cost;
+        array_open_cell_list.erase(array_open_cell_list.begin());
 
         // check, whether the solution is found (we are at the goal)
         // we stop, when get path to any voronoi cell
@@ -93,7 +89,7 @@ int findDijkstraPathToVoronoi(const cv::Mat& obstacle_map, const cv::Mat& vorono
                 }
 
                 float g2 = g + l2_cost; // movement_cost
-                open_cells.push_back(std::make_tuple(g2, x2, y2));
+                array_open_cell_list.insert({ cv::Point2i(x2, y2), g2 });
                 visited.at<uchar>(x2, y2) = 255;
             }
         }
@@ -152,9 +148,6 @@ bool findRelaxedAStarPathOnImage(const cv::Mat& voronoi_map, std::vector<cv::Poi
     std::multiset<AStarCell, std::less<AStarCell>> array_open_cell_list;
     array_open_cell_list.insert({ start, calcHCost(start, goal, false) });
 
-    // std::vector<std::tuple<float, int, int>> open_cells;
-    // open_cells.push_back(std::make_tuple(calcHCost(start, goal, false), start.x, start.y));
-
     ROS_DEBUG("Creating g score array");
     int loop_counter = 0;
 
@@ -164,16 +157,6 @@ bool findRelaxedAStarPathOnImage(const cv::Mat& voronoi_map, std::vector<cv::Poi
     while (!array_open_cell_list.empty() && g_score.at<float>(goal.x, goal.y) == std::numeric_limits<float>::infinity() && !timeout)
     {
         loop_counter++;
-
-        /*
-        std::sort(open_cells.begin(), open_cells.end());
-        std::reverse(open_cells.begin(), open_cells.end());
-        // get node with lowest cost
-        std::tuple<float, int, int> next = open_cells[open_cells.size() - 1];
-        open_cells.pop_back();
-        float current_gscore = std::get<0>(next);
-        cv::Point2i current_cell(std::get<1>(next), std::get<2>(next));
-        */
 
         // Get cell with lowest f_score and remove it so it will not be visited again
         cv::Point2i current_cell = array_open_cell_list.begin()->pixel;
@@ -199,7 +182,6 @@ bool findRelaxedAStarPathOnImage(const cv::Mat& voronoi_map, std::vector<cv::Poi
             if (g_score.at<float>(neighbor_cell.x, neighbor_cell.y) == std::numeric_limits<float>::infinity())
             {
                 g_score.at<float>(neighbor_cell.x, neighbor_cell.y) = calcGCost(current_gscore, current_cell, neighbor_cell);
-                // open_cells.push_back(std::make_tuple(calcFCost(current_gscore, current_cell, neighbor_cell, goal), neighbor_cell.x, neighbor_cell.y));
                 array_open_cell_list.insert(
                     { neighbor_cell, calcFCost(current_gscore, current_cell, neighbor_cell, goal) });
             }
