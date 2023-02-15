@@ -1,0 +1,4 @@
+prm_global_planner:
+  num_samples: 3000
+  max_distance: 1.0
+  num_edges: 5

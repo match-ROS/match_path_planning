@@ -1,0 +1,7 @@
+rrt_star_global_planner:
+  probability_threshold: 0.9
+  radius: 1.0
+  goal_tolerance: 0.2
+  epsilon_min: 0.1
+  epsilon_max: 0.5
+  max_num_nodes: 10000

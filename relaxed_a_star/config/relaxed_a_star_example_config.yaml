@@ -1,0 +1,21 @@
+relaxed_a_star:
+  # The default tolerance that is used if the tolerance of the received goal is not valid.
+  # Default: 0.2
+  default_tolerance: 0.2
+  # How many of the neighbor cells should be used. Options:
+  # 4 - This means the cells in the north, south, west, east direction are used
+  # 8 - This means all cells around (also the diagonal ones) are used
+  # Default: 8
+  neighbor_type: 8
+  # Threshold for the costmap values that define if a cell is free or not.
+  # This image: http://wiki.ros.org/costmap_2d?action=AttachFile&do=get&target=costmapspec.png explains the cell cost values.
+  # Value 0 means the farthest away from the wall. Value 254 defines a cell where an obstacle is located.
+  # The greater this value will be defined the closer the global path will be planed next to walls.
+  # Default: 0
+  free_cell_threshold: 0
+  # Distance that is added from the start point of the Relaxed A Star in the direction of the start orientation.
+  # This should help no creating splines that instantly make a curve
+  start_straight_distance: 0.0
+  # Distance that is subtracted from the end point of the Relaxed A Star in the direction of the end orientation.
+  # This should help no creating splines that instantly make a curve before the end
+  end_straight_distance: 0.0
