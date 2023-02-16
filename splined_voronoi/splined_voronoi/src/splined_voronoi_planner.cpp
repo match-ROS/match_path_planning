@@ -56,6 +56,7 @@ void SplinedVoronoiPlanner::initialize(std::string name, costmap_2d::Costmap2DRO
         private_nh.param("max_optimization_time", max_optimization_time_, 4.0);
         private_nh.param("free_space_factor", this->free_space_factor_, 4.0);
         private_nh.param("optimize_lengths", optimize_lengths_, false);
+        private_nh.param("perform_splining", this->perform_splining_, true);
         ROS_INFO_STREAM("Load param free_cell_threshold: " << free_cell_threshold_);
         ROS_INFO_STREAM("Load param angle_threshold: " << angle_threshold_);
         ROS_INFO_STREAM("Load param min_distance_control_points: " << min_distance_control_points_m_);
@@ -140,6 +141,7 @@ void SplinedVoronoiPlanner::reconfigureCB(splined_voronoi::SplinedVoronoiPlanner
     this->min_distance_control_points_m_ = config.min_distance_control_points;
     this->max_optimization_time_ = config.max_optimization_time;
     this->free_space_factor_ = config.free_space_factor;
+    this->perform_splining_ = config.perform_splining;
     ROS_INFO_STREAM("Max curvature is now: " << this->max_curvature_);
 }
 
@@ -280,7 +282,6 @@ bool SplinedVoronoiPlanner::makePlan(const geometry_msgs::PoseStamped& start, co
             if (cell_cost != costmap_2d::NO_INFORMATION && cell_cost > free_cell_threshold_)
             {
                 costmap_img_wo_unknowns.at<uchar>(i, j, 0) = 255;
-                unknown_counter++;
             }
             if (cell_cost > free_cell_threshold_)
             {
@@ -337,7 +338,7 @@ bool SplinedVoronoiPlanner::makePlan(const geometry_msgs::PoseStamped& start, co
 
     // get areas with large freespaces and overly voronoi diagram with it
     cv::Mat costmap_large_spaces;
-    cv::threshold(costmap_img_orig, costmap_large_spaces, this->free_space_factor_  / this->costmap_resolution_, 255, cv::THRESH_BINARY);
+    cv::threshold(costmap_dist_img, costmap_large_spaces, this->free_space_factor_  / this->costmap_resolution_, 255, cv::THRESH_BINARY);
     costmap_large_spaces.convertTo(costmap_large_spaces, CV_8UC1);
     cv::bitwise_or(this->voronoi_img_, costmap_large_spaces, this->voronoi_img_);
 
@@ -395,17 +396,27 @@ bool SplinedVoronoiPlanner::makePlan(const geometry_msgs::PoseStamped& start, co
         // for an empty path return a plan from start to goal, otherwise dont include start to begin plan on voronoi
         path.insert(path.begin(), this->start_map_);
     }
-    
-    // select waypoints from path
-    double min_distance_control_points_px = this->min_distance_control_points_m_ / this->costmap_resolution_;
-    std::vector<cv::Point2i> sparse_path;
-    bool sparse_success = path_planning::sparsify_path(path, sparse_path, this->angle_threshold_, min_distance_control_points_px);
 
     // create unreduced plan for debug output
     std::vector<geometry_msgs::PoseStamped> unreduced_plan;
     path_planning::createPlanFromPath(path, unreduced_plan, this->costmap_, this->costmap_global_frame_);
     this->astar_path_ = unreduced_plan;
     this->publishPlan(unreduced_plan, this->original_plan_pub_);
+
+    if(!perform_splining_)
+    {
+        // return unsplined path
+        for (auto pose : unreduced_plan)
+        {
+            plan.push_back(pose);
+        }
+        return true;
+    }
+
+    // select waypoints from path
+    double min_distance_control_points_px = this->min_distance_control_points_m_ / this->costmap_resolution_;
+    std::vector<cv::Point2i> sparse_path;
+    bool sparse_success = path_planning::sparsify_path(path, sparse_path, this->angle_threshold_, min_distance_control_points_px);
 
     // create sparse plan for debug output
     std::vector<geometry_msgs::PoseStamped> sparse_plan;

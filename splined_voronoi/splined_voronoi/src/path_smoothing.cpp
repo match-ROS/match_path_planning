@@ -189,62 +189,102 @@ bool calcControlPointsForPath(const std::vector<cv::Point2d>& points, const std:
     return true;
 }
 
-tinyspline::BSpline buildTinyspline(std::vector<cv::Point2d> control_points)
+
+cv::Point2d interpolate_spline(const std::vector<cv::Point2d>& control_points, double fraction)
 {
-    // ROS_INFO("Building spline");
-    tinyspline::BSpline spline(6, 2, 5);
-    // Setup control points. They are stored as x0, y0, x1, y1, x2, y2, etc.
-    std::vector<tinyspline::real> ctrlp = spline.controlPoints();
-    ctrlp[0] = (tsReal)control_points.at(0).x;
-    ctrlp[1] = (tsReal)control_points.at(0).y;
-    ctrlp[2] = (tsReal)control_points.at(1).x;
-    ctrlp[3] = (tsReal)control_points.at(1).y;
-    ctrlp[4] = (tsReal)control_points.at(2).x;
-    ctrlp[5] = (tsReal)control_points.at(2).y;
-    ctrlp[6] = (tsReal)control_points.at(3).x;
-    ctrlp[7] = (tsReal)control_points.at(3).y;
-    ctrlp[8] = (tsReal)control_points.at(4).x;
-    ctrlp[9] = (tsReal)control_points.at(4).y;
-    ctrlp[10] = (tsReal)control_points.at(5).x;
-    ctrlp[11] = (tsReal)control_points.at(5).y;
-    spline.setControlPoints(ctrlp);
-    return spline;
+    cv::Point2d p_0(control_points.at(0));
+    cv::Point2d p_1(control_points.at(1));
+    cv::Point2d p_2(control_points.at(2));
+    cv::Point2d p_3(control_points.at(3));
+    cv::Point2d p_4(control_points.at(4));
+    cv::Point2d p_5(control_points.at(5));
+    cv::Point2d c_qb_0 = -p_0 + 5 * p_1 - 10 * p_2 + 10 * p_3 - 5 * p_4 + p_5;
+    cv::Point2d c_qb_1 = 5 * p_0 - 20 * p_1 + 30 * p_2 - 20 * p_3 + 5 * p_4;
+    cv::Point2d c_qb_2 = -10 * p_0 + 30 * p_1 - 30 * p_2 + 10 * p_3;
+    cv::Point2d c_qb_3 = 10 * p_0 - 20 * p_1 + 10 * p_2;
+    cv::Point2d c_qb_4 = -5 * p_0 + 5 * p_1;
+    cv::Point2d c_qb_5 = p_0;
+    cv::Point2d out_sample = pow(fraction, 5) * c_qb_0 + pow(fraction, 4) * c_qb_1 + pow(fraction, 3) * c_qb_2 + pow(fraction, 2) * c_qb_3 + fraction * c_qb_4 + c_qb_5;
+    return out_sample;
 }
 
 
-double calcTinysplineLength(const tinyspline::BSpline& spline)
+cv::Point2d interpolate_spline_der(const std::vector<cv::Point2d>& control_points, double fraction)
+{
+    cv::Point2d p_0(control_points.at(0));
+    cv::Point2d p_1(control_points.at(1));
+    cv::Point2d p_2(control_points.at(2));
+    cv::Point2d p_3(control_points.at(3));
+    cv::Point2d p_4(control_points.at(4));
+    cv::Point2d p_5(control_points.at(5));
+    cv::Point2d c_qb_0 = -p_0 + 5 * p_1 - 10 * p_2 + 10 * p_3 - 5 * p_4 + p_5;
+    cv::Point2d c_qb_1 = 5 * p_0 - 20 * p_1 + 30 * p_2 - 20 * p_3 + 5 * p_4;
+    cv::Point2d c_qb_2 = -10 * p_0 + 30 * p_1 - 30 * p_2 + 10 * p_3;
+    cv::Point2d c_qb_3 = 10 * p_0 - 20 * p_1 + 10 * p_2;
+    cv::Point2d c_qb_4 = -5 * p_0 + 5 * p_1;
+    cv::Point2d c_qb_5 = p_0;
+    cv::Point2d out_sample = 5 * pow(fraction, 4) * c_qb_0 + 4 * pow(fraction, 3) * c_qb_1 + 3 * pow(fraction, 2) * c_qb_2 + 2 * fraction * c_qb_3 + c_qb_4;
+    return out_sample;
+}
+
+cv::Point2d interpolate_spline_der2(const std::vector<cv::Point2d>& control_points, double fraction)
+{
+    cv::Point2d p_0(control_points.at(0));
+    cv::Point2d p_1(control_points.at(1));
+    cv::Point2d p_2(control_points.at(2));
+    cv::Point2d p_3(control_points.at(3));
+    cv::Point2d p_4(control_points.at(4));
+    cv::Point2d p_5(control_points.at(5));
+    cv::Point2d c_qb_0 = -p_0 + 5 * p_1 - 10 * p_2 + 10 * p_3 - 5 * p_4 + p_5;
+    cv::Point2d c_qb_1 = 5 * p_0 - 20 * p_1 + 30 * p_2 - 20 * p_3 + 5 * p_4;
+    cv::Point2d c_qb_2 = -10 * p_0 + 30 * p_1 - 30 * p_2 + 10 * p_3;
+    cv::Point2d c_qb_3 = 10 * p_0 - 20 * p_1 + 10 * p_2;
+    cv::Point2d c_qb_4 = -5 * p_0 + 5 * p_1;
+    cv::Point2d c_qb_5 = p_0;
+    cv::Point2d out_sample = 20 * pow(fraction, 3) * c_qb_0 + 12 * pow(fraction, 2) * c_qb_1 + 6 * fraction * c_qb_2 + 2 * c_qb_3;
+    return out_sample;
+}
+
+bool sample_spline(const std::vector<cv::Point2d>& control_points, std::vector<cv::Point2d>& out_samples, int num_samples)
+{
+    for (int idx = 0; idx < num_samples; idx++)
+    {
+        double frac = (double)idx / (double)num_samples;
+        out_samples.push_back(interpolate_spline(control_points, frac));
+    }
+    return true;
+}
+
+double calcSplineLength(const std::vector<cv::Point2d>& control_points)
 {
     int num_samples = 100;
-    std::vector<tinyspline::real> sampled_points_for_length = spline.sample(num_samples);
+    std::vector<cv::Point2d> sampled_points_for_length;
+    sample_spline(control_points, sampled_points_for_length, num_samples);
     double spline_length = 0.0;
-    for (int index_x = 2; index_x < sampled_points_for_length.size() - 1; index_x += 2)
+    for (int idx = 1; idx < sampled_points_for_length.size(); idx++)
     {
-        int index_y = index_x + 1;
-        double x_val = sampled_points_for_length.at(index_x);
-        double y_val = sampled_points_for_length.at(index_y);
-        double last_x_val = sampled_points_for_length.at(index_x - 2);
-        double last_y_val = sampled_points_for_length.at(index_y - 2);
-        double segdist = sqrt(pow(x_val - last_x_val, 2) + pow(y_val - last_y_val, 2));
+        cv::Point2d curr_sample = sampled_points_for_length.at(idx);
+        cv::Point2d last_sample = sampled_points_for_length.at(idx - 1);
+        cv::Point2d diff = curr_sample - last_sample;
+        double segdist = sqrt(pow(diff.x, 2) + pow(diff.y, 2));
         spline_length += segdist;
     }
     return spline_length;
 }
 
-void equidistantSampling(const tinyspline::BSpline& spline, double sample_distance, std::vector<cv::Point2d>& samples)
+void equidistantSampling(const std::vector<cv::Point2d>& control_points, double sample_distance, std::vector<cv::Point2d>& samples)
 {
     samples.clear();
-    double spline_length = calcTinysplineLength(spline);
-    tinyspline::Vec2 last_sample = spline(0).resultVec2();
+    double spline_length = calcSplineLength(control_points);
+    cv::Point2d last_sample = interpolate_spline(control_points, 0);
     int num_samples = (int) 10 * spline_length / sample_distance;
     for (double frac = 0.0; frac <= 1; frac+=1.0/(double)num_samples)
     {
-        tinyspline::Vec2 sample = spline(frac).resultVec2();
-        tinyspline::Vec2 diff = sample - last_sample;
-        if (diff.magnitude() > sample_distance)
+        cv::Point2d sample = interpolate_spline(control_points, frac);
+        cv::Point2d diff = sample - last_sample;
+        if (sqrt(pow(diff.x, 2) + pow(diff.y, 2)) > sample_distance)
         {
-            double x_val = sample.x();
-            double y_val = sample.y();
-            samples.push_back(cv::Point2d(x_val, y_val));
+            samples.push_back(sample);
             last_sample = sample;
         }
     }
@@ -262,13 +302,11 @@ void getSplinePathSamples(const std::vector<cv::Point2d>& points, std::vector<do
 
     for (auto control_points: control_points_path)
     {
-        tinyspline::BSpline spline = buildTinyspline(control_points);
         std::vector<cv::Point2d> samples_seg;
-        equidistantSampling(spline, sample_distance, samples_seg);
+        equidistantSampling(control_points, sample_distance, samples_seg);
         points_out.insert(points_out.end(), samples_seg.begin(), samples_seg.end());
     }
 }
-
 
 cv::Mat buildCostmapImg(const cv::Mat& img)
 {
@@ -277,7 +315,7 @@ cv::Mat buildCostmapImg(const cv::Mat& img)
     cv::distanceTransform(~img, costmap_img, cv::DIST_L2, 3, CV_8UC1);
     // cv::imwrite("/home/rosmatch/Bilder/dists.png", costmap_img);
     cv::Mat combined_costmap_img;
-    cv::add(img, 255 - costmap_img, combined_costmap_img, cv::noArray(), CV_8UC1);
+    cv::add(img, 254 - costmap_img, combined_costmap_img, cv::noArray(), CV_8UC1);
     // cv::imwrite("/home/rosmatch/Bilder/costmap_img_dist.png", combined_costmap_img);
     cv::Mat costmap_img_inside_obstacles;
     cv::distanceTransform(img, costmap_img_inside_obstacles, cv::DIST_L2, 3);
@@ -290,30 +328,26 @@ cv::Mat buildCostmapImg(const cv::Mat& img)
     return costmap_img_inside_obstacles;
 }
 
-
-std::vector<double> tinysplineCurvatures(const tinyspline::BSpline& spline, int num_samples = 1000)
+std::vector<double> splineCurvatures(const std::vector<cv::Point2d>& control_points, int num_samples = 1000)
 {
     // ROS_INFO("Calculating curvatures");
-    tinyspline::BSpline spline_deriv = spline.derive();
-    tinyspline::BSpline spline_deriv2 = spline_deriv.derive();
     std::vector<double> curvatures;
     double eps = 0.0001;
-    for (double t = 0; t <= 1; t += 1. / (double)num_samples)
+    for (double t = eps; t <= 1; t += 1. / (double)num_samples)
     {
-        tinyspline::Vec3 cp = spline_deriv(t).resultVec3();
-        tinyspline::Vec3 cpp = spline_deriv2(t).resultVec3();
-        double curvature = abs((cp.x() * cpp.y() - cpp.x() * cp.y())/ pow(pow(cp.x(), 2) + pow(cp.y(), 2), 1.5));
+        cv::Point2d cp = interpolate_spline_der(control_points, t);
+        cv::Point2d cpp = interpolate_spline_der2(control_points, t);
+        double curvature = abs((cp.x * cpp.y - cpp.x * cp.y)/ pow(pow(cp.x, 2) + pow(cp.y, 2), 1.5));
         curvatures.push_back(curvature);
     }
     return curvatures;
 }
 
-
-double maxCostOfSpline(const tinyspline::BSpline& spline, const costmap_2d::Costmap2D& costmap, const cv::Mat& costmap_img)
+double maxCostOfSpline(const std::vector<cv::Point2d>& control_points, const costmap_2d::Costmap2D& costmap, const cv::Mat& costmap_img)
 {
     double sample_distance = 0.02;
     std::vector<cv::Point2d> samples;
-    equidistantSampling(spline, sample_distance, samples);
+    equidistantSampling(control_points, sample_distance, samples);
     std::vector<cv::Point2i> samples_map;
     pathWorldToMap(samples, samples_map, std::make_shared<costmap_2d::Costmap2D>(costmap));
     double max_cost = 0.0;
@@ -343,23 +377,40 @@ void get_optimize_indices(const std::vector<cv::Point2d>& points, const std::vec
     for (int idx = 0; idx < control_points_path.size(); idx++)
     {
         std::vector<cv::Point2d> control_points = control_points_path.at(idx);
-        tinyspline::BSpline spline = buildTinyspline(control_points);
-        std::vector<double> curvatures = tinysplineCurvatures(spline, 200);
+        std::vector<double> curvatures = splineCurvatures(control_points, 200);
         double max_curvature = *std::max_element(curvatures.begin(), curvatures.end());
-        double max_cost_seg = maxCostOfSpline(spline, costmap, costmap_img);
+        double max_cost_seg = maxCostOfSpline(control_points, costmap, costmap_img);
+        // optimize_lengths_indices.push_back(idx);
         if (max_curvature > curve_max)
         {
             optimize_indices.push_back(idx + 1);
             ROS_INFO_STREAM_COND(print_output, "Segment " << idx + 1 << " needs optimization with curvature " << max_curvature);
+            if (std::find(optimize_lengths_indices.begin(), optimize_lengths_indices.end(), idx) == optimize_lengths_indices.end())
+            {
+                optimize_lengths_indices.push_back(idx);
+            }
+            if (std::find(optimize_lengths_indices.begin(), optimize_lengths_indices.end(), idx + 1) == optimize_lengths_indices.end())
+            {
+                optimize_lengths_indices.push_back(idx + 1);
+            }
         }
         else if (max_cost_seg > 254.0)
         {
             optimize_indices.push_back(idx + 1);
             ROS_INFO_STREAM_COND(print_output, "Segment " << idx + 1 << " needs optimization due to collision.");
+            if (std::find(optimize_lengths_indices.begin(), optimize_lengths_indices.end(), idx) == optimize_lengths_indices.end())
+            {
+                optimize_lengths_indices.push_back(idx);
+            }
+            if (std::find(optimize_lengths_indices.begin(), optimize_lengths_indices.end(), idx + 1) == optimize_lengths_indices.end())
+            {
+                optimize_lengths_indices.push_back(idx + 1);
+            }
         }
         else
         {
             // ROS_INFO_STREAM_COND(print_output, "Segment " << idx + 1 << " does not need optimization with curvature " << max_curvature);
+            /*
             bool idx_in_optimize = std::find(optimize_indices.begin(), optimize_indices.end(), idx) != optimize_indices.end();
             bool idx_already_contained = std::find(optimize_lengths_indices.begin(), optimize_lengths_indices.end(), idx) != optimize_lengths_indices.end();
             bool next_idx_already_contained = std::find(optimize_lengths_indices.begin(), optimize_lengths_indices.end(), idx + 1) != optimize_lengths_indices.end();
@@ -371,8 +422,10 @@ void get_optimize_indices(const std::vector<cv::Point2d>& points, const std::vec
             {
                 optimize_lengths_indices.push_back(idx + 1);
             }
+            */
         }
     }
+    // optimize_lengths_indices.push_back(control_points_path.size());
 }
 
 
@@ -381,14 +434,12 @@ double deviationPoints(const std::vector<double> &x, std::vector<double> &grad, 
     specific_points_optim_data* optim_data = reinterpret_cast<specific_points_optim_data*>(data);
 
     int begin_lengths_index = optim_data->optimize_indices.size() * 2;
-    std::vector<double> lengths;
+    std::vector<double> lengths_orig(optim_data->points_orig.size() - 1, optim_data->default_length);
+    std::vector<double> lengths(lengths_orig);
     if (optim_data->optimize_lengths)
     {
-        lengths = std::vector<double>(x.begin() + begin_lengths_index, x.end());
-    }
-    else
-    {
-        lengths = std::vector<double>(optim_data->points_orig.size() - 1, optim_data->default_length); // default length
+        std::vector<double> lengths_opt = std::vector<double>(x.begin() + begin_lengths_index, x.end());
+        replaceValsInVec(lengths_opt, lengths_orig, optim_data->optimize_lengths_indices, lengths);
     }
     std::vector<double> points_flattened = std::vector<double>(x.begin(), x.begin() + begin_lengths_index);
     std::vector<cv::Point2d> points = vecToPoints(points_flattened);
@@ -414,14 +465,12 @@ double maxCostOfPath(const std::vector<double> &x, std::vector<double> &grad, vo
     specific_points_optim_data *constraint_data = reinterpret_cast<specific_points_optim_data*>(data);
 
     int begin_lengths_index = constraint_data->optimize_indices.size() * 2;
-    std::vector<double> lengths;
+    std::vector<double> lengths_orig(constraint_data->points_orig.size() - 1, constraint_data->default_length);
+    std::vector<double> lengths(lengths_orig);
     if (constraint_data->optimize_lengths)
     {
-        lengths = std::vector<double>(x.begin() + begin_lengths_index, x.end());
-    }
-    else
-    {
-        lengths = std::vector<double>(constraint_data->points_orig.size() - 1, constraint_data->default_length); // default length
+        std::vector<double> lengths_opt = std::vector<double>(x.begin() + begin_lengths_index, x.end());
+        replaceValsInVec(lengths_opt, lengths_orig, constraint_data->optimize_lengths_indices, lengths);
     }
     std::vector<double> points_flattened = std::vector<double>(x.begin(), x.begin() + begin_lengths_index);
     std::vector<cv::Point2d> points = vecToPoints(points_flattened);
@@ -456,8 +505,7 @@ double maxCostOfPath(const std::vector<double> &x, std::vector<double> &grad, vo
         {
             // continue;
         }
-        tinyspline::BSpline spline = buildTinyspline(control_points);
-        double max_cost_seg = maxCostOfSpline(spline, constraint_data->costmap, constraint_data->costmap_img);
+        double max_cost_seg = maxCostOfSpline(control_points, constraint_data->costmap, constraint_data->costmap_img);
         if (max_cost_seg > max_cost)
         {
             max_cost = max_cost_seg;
@@ -475,14 +523,12 @@ double maxCurvatureFromPoints(const std::vector<double> &x, std::vector<double> 
     specific_points_optim_data *constraint_data = reinterpret_cast<specific_points_optim_data*>(data);
     int begin_lengths_index = constraint_data->optimize_indices.size() * 2;
     // std::vector<double> lengths = std::vector<double>(x.begin() + begin_lengths_index, x.end());
-    std::vector<double> lengths;
+    std::vector<double> lengths_orig(constraint_data->points_orig.size() - 1, constraint_data->default_length);
+    std::vector<double> lengths(lengths_orig);
     if (constraint_data->optimize_lengths)
     {
-        lengths = std::vector<double>(x.begin() + begin_lengths_index, x.end());
-    }
-    else
-    {
-        lengths = std::vector<double>(constraint_data->points_orig.size() - 1, constraint_data->default_length); // default length
+        std::vector<double> lengths_opt = std::vector<double>(x.begin() + begin_lengths_index, x.end());
+        replaceValsInVec(lengths_opt, lengths_orig, constraint_data->optimize_lengths_indices, lengths);
     }
     std::vector<double> points_flattened = std::vector<double>(x.begin(), x.begin() + begin_lengths_index);
     std::vector<cv::Point2d> points = vecToPoints(points_flattened);
@@ -517,8 +563,7 @@ double maxCurvatureFromPoints(const std::vector<double> &x, std::vector<double> 
         {
             // continue;
         }
-        tinyspline::BSpline spline = buildTinyspline(control_points);
-        std::vector<double> curvatures = tinysplineCurvatures(spline, 200);
+        std::vector<double> curvatures = splineCurvatures(control_points, 200);
         double max_curvature_seg = *std::max_element(curvatures.begin(), curvatures.end());
         if (max_curvature_seg > max_curvature)
         {
@@ -531,13 +576,79 @@ double maxCurvatureFromPoints(const std::vector<double> &x, std::vector<double> 
     return max_curvature - constraint_data->curvature_limit;
 }
 
+void maxCostAndCurvatureFromSpline(const std::vector<std::vector<cv::Point2d>>& control_points_path, const specific_points_optim_data& optim_data, double& max_curvature, double& max_cost)
+{
+    cv::Point2d map_origin(optim_data.costmap.getOriginX(), optim_data.costmap.getOriginY());
+    int map_size_x = optim_data.costmap.getSizeInCellsX();
+    int map_size_y = optim_data.costmap.getSizeInCellsY();
+    double map_resolution = optim_data.costmap.getResolution();
+    cv::Point2i last_point_map(-1,-1);
+    for (auto control_points: control_points_path)
+    {
+        double eps = 0.0001;
+        for (double t = eps; t < 1; t += 1. / 200.0)
+        {
+            cv::Point2d c = interpolate_spline(control_points, t);
+            cv::Point2d cp = interpolate_spline_der(control_points, t);
+            cv::Point2d cpp = interpolate_spline_der2(control_points, t);
+            double curvature = abs((cp.x * cpp.y - cpp.x * cp.y)/ pow(pow(cp.x, 2) + pow(cp.y, 2), 1.5));
+            if (curvature > max_curvature)
+            {
+                max_curvature = curvature;
+            }
+            cv::Point2i point_map;
+            worldToMap(c, point_map, map_origin, map_size_x, map_size_y, map_resolution);
+            if (point_map.x == last_point_map.x && point_map.y == last_point_map.y)
+            {
+                continue;
+            }
+            last_point_map = point_map;
+            double pixel_cost = optim_data.costmap_img.at<float>(point_map.x, point_map.y);
+            if (pixel_cost > max_cost)
+            {
+                max_cost = pixel_cost;
+            }
+        }
+    }
+}
+
 double combinedMinFunction(const std::vector<double> &x, std::vector<double> &grad, void *data)
 {
+    std::string curr_vals_msg = "";
+    for (auto val: x)
+    {
+        curr_vals_msg += std::to_string(val) + " ";
+    }
+    // ROS_INFO_STREAM("Current values: " << curr_vals_msg);
     std::chrono::steady_clock::time_point start_min_func = std::chrono::steady_clock::now();
     specific_points_optim_data *optim_data = reinterpret_cast<specific_points_optim_data*>(data);
+
+    // sample spline so that individual functions dont have to do it
+    int begin_lengths_index = optim_data->optimize_indices.size() * 2;
+    std::vector<double> lengths_orig(optim_data->points_orig.size() - 1, optim_data->default_length);
+    std::vector<double> lengths(lengths_orig);
+    if (optim_data->optimize_lengths)
+    {
+        std::vector<double> lengths_opt = std::vector<double>(x.begin() + begin_lengths_index, x.end());
+        replaceValsInVec(lengths_opt, lengths_orig, optim_data->optimize_lengths_indices, lengths);
+    }
+    std::vector<double> points_flattened = std::vector<double>(x.begin(), x.begin() + begin_lengths_index);
+    std::vector<cv::Point2d> points = vecToPoints(points_flattened);
+    std::vector<cv::Point2d> points_orig_replaced;
+    replaceValsInVec(points, optim_data->points_orig, optim_data->optimize_indices, points_orig_replaced);
+    std::vector<cv::Point2d> connection_points = calcConnectionPoints(points_orig_replaced);
+    std::vector<std::vector<cv::Point2d>> control_points_path;
+    calcControlPointsForPath(points_orig_replaced, lengths, control_points_path, optim_data->default_length);
+
+    double max_cost = 0;
+    double max_curvature = 0;
+    maxCostAndCurvatureFromSpline(control_points_path, *optim_data, max_curvature, max_cost);
+    // end of new part
+
+
     double distance_to_orig = deviationPoints(x, grad, data);
-    double max_cost = maxCostOfPath(x, grad, data) + 254.0;
-    double max_curvature = maxCurvatureFromPoints(x, grad, data) + optim_data->curvature_limit;
+    // double max_cost = maxCostOfPath(x, grad, data) + 254.0;
+    // double max_curvature = maxCurvatureFromPoints(x, grad, data) + optim_data->curvature_limit;
     double curvature_penalty = 0.0;
     double cost_penalty = 0.0;
     if (max_curvature > optim_data->curvature_limit)
@@ -562,6 +673,7 @@ double combinedMinFunction(const std::vector<double> &x, std::vector<double> &gr
     double total_time_in_optimization = (std::chrono::duration_cast<std::chrono::microseconds>(end_min_func - optim_data->start_time).count()) / 1000000.0;
     if (total_time_in_optimization > optim_data->time_limit)
     {
+        ROS_INFO_STREAM("Last vals before aborting: " << max_cost << ", " << max_curvature);
         optim_data->was_terminated = false;
         throw nlopt::forced_stop();
     }
@@ -569,7 +681,7 @@ double combinedMinFunction(const std::vector<double> &x, std::vector<double> &gr
     return distance_to_orig + curvature_penalty + cost_penalty;
 }
 
-int optimizeSpecificPoints(const std::vector<cv::Point2d>& points_orig, const std::vector<int>& optimize_indices, std::vector<cv::Point2d>& points_out, std::vector<double>& lengths_out, const costmap_2d::Costmap2D& costmap, const cv::Mat& costmap_img, double curve_max, bool optimize_lengths, double default_length, double max_optimization_time)
+int optimizeSpecificPoints(const std::vector<cv::Point2d>& points_orig, const std::vector<int>& optimize_indices, const std::vector<int>& optimize_lengths_indices, std::vector<cv::Point2d>& points_out, std::vector<double>& lengths_out, const costmap_2d::Costmap2D& costmap, const cv::Mat& costmap_img, double curve_max, bool optimize_lengths, double default_length, double max_optimization_time)
 {
     ROS_INFO("Start optimizing of Points");
     double eps = 0.00001;
@@ -578,12 +690,12 @@ int optimizeSpecificPoints(const std::vector<cv::Point2d>& points_orig, const st
     // create additional data
     std::vector<int> adaptive_optimize_indices = std::vector<int>(optimize_indices.begin(), optimize_indices.end());
     std::vector<double> res_vals;
-    specific_points_optim_data optim_data{points_orig, adaptive_optimize_indices, costmap, costmap_img, curve_max, max_optimization_time, start_time, optimize_lengths, default_length, false, res_vals};
+    specific_points_optim_data optim_data{points_orig, adaptive_optimize_indices, costmap, costmap_img, curve_max, max_optimization_time, start_time, optimize_lengths, default_length, false, res_vals, optimize_lengths_indices};
 
     int len_opt = optimize_indices.size() * 2;
     if (optimize_lengths)
     {
-        len_opt += points_orig.size() - 1;
+        len_opt += optimize_lengths_indices.size();
     }
     nlopt::opt opt(nlopt::LN_NEWUOA, len_opt);
     cv::Point2i map_top_left(costmap.getSizeInCellsX() - 1, costmap.getSizeInCellsY() - 1);
@@ -607,7 +719,7 @@ int optimizeSpecificPoints(const std::vector<cv::Point2d>& points_orig, const st
     }
     if (optimize_lengths)
     {
-        for (int i = 0; i < points_orig.size() - 1; i++)
+        for (int i = 0; i < optimize_lengths_indices.size(); i++)
         {
             lower_bounds.push_back(0.0);
             upper_bounds.push_back(10.0);
@@ -627,7 +739,7 @@ int optimizeSpecificPoints(const std::vector<cv::Point2d>& points_orig, const st
     std::vector<double> points_to_optim_flattened = pointsToVec(points_to_optim);
     if (optimize_lengths)
     {
-        for (int i = 0; i < points_orig.size() - 1; i++)
+        for (int i = 0; i < optimize_lengths_indices.size(); i++)
         {
             points_to_optim_flattened.push_back(default_length); // default length
         }
@@ -666,6 +778,7 @@ int optimizeSpecificPoints(const std::vector<cv::Point2d>& points_orig, const st
     }
 
     int begin_lengths_index = optimize_indices.size() * 2;
+    /*
     if (optimize_lengths)
     {
         lengths_out = std::vector<double>(points_to_optim_flattened.begin() + begin_lengths_index, points_to_optim_flattened.end());
@@ -675,6 +788,15 @@ int optimizeSpecificPoints(const std::vector<cv::Point2d>& points_orig, const st
     {
         lengths_out = std::vector<double>(points_orig.size() - 1, default_length); // default length
     }
+    */
+    std::vector<double> lengths_orig(points_orig.size() - 1, default_length);
+    lengths_out = lengths_orig;
+    if (optimize_lengths)
+    {
+        std::vector<double> lengths_opt = std::vector<double>(points_to_optim_flattened.begin() + begin_lengths_index, points_to_optim_flattened.end());
+        replaceValsInVec(lengths_opt, lengths_orig, optimize_lengths_indices, lengths_out);
+    }
+
     std::vector<double> points_flattened = std::vector<double>(points_to_optim_flattened.begin(), points_to_optim_flattened.begin() + begin_lengths_index);
     std::vector<cv::Point2d> points_res = vecToPoints(points_flattened);
     for (auto point: points_res)
@@ -714,12 +836,10 @@ int optimizeSplinePath(const std::vector<cv::Point2d>& points, std::vector<cv::P
         opt_ind_output += std::to_string(optimize_indices.at(i)) + " ";
     ROS_INFO_STREAM(opt_ind_output);
 
-    /*
-    std::cout << "Optimize length indices: ";
-    for (int i = 0; i < optimize_lengths_indices.size(); i++)
-        std::cout << optimize_lengths_indices.at(i) << " ";
-    std::cout << std::endl;
-    */
+    std::string opt_length_ind_output = "Optimize lengths indices: ";
+    for (auto idx : optimize_lengths_indices)
+        opt_length_ind_output += std::to_string(idx) + " ";
+    ROS_INFO_STREAM(opt_length_ind_output);
 
     double default_length_1 = 0.5;
     double default_length_2 = 0.25;
@@ -741,7 +861,7 @@ int optimizeSplinePath(const std::vector<cv::Point2d>& points, std::vector<cv::P
         {
             optimize_indices.clear();
         }
-        optimize_success = optimizeSpecificPoints(points, optimize_indices, res_points, lengths_out, costmap, costmap_img, curve_max, optimize_lengths, default_length, max_optimization_time);
+        optimize_success = optimizeSpecificPoints(points, optimize_indices, optimize_lengths_indices, res_points, lengths_out, costmap, costmap_img, curve_max, optimize_lengths, default_length, max_optimization_time);
         replaceValsInVec(res_points, points, optimize_indices, optimized_points);
         // TODO: check complete path for curvature
         if (optimize_success != OptimizationStatus::Failure)
