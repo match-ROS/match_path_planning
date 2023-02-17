@@ -154,7 +154,7 @@ bool findRelaxedAStarPathOnImage(const cv::Mat& voronoi_map, std::vector<cv::Poi
     bool timeout = false;
     double max_runtime = 4.0;
     std::chrono::steady_clock::time_point start_time = std::chrono::steady_clock::now();
-    while (!array_open_cell_list.empty() && g_score.at<float>(goal.x, goal.y) == std::numeric_limits<float>::infinity() && !timeout)
+    while (!array_open_cell_list.empty() && g_score.at<float>(goal.x, goal.y) == std::numeric_limits<float>::infinity()) //  && !timeout
     {
         loop_counter++;
 
@@ -262,7 +262,7 @@ bool findAStarPathOnImage(const cv::Mat& voronoi_map, std::vector<cv::Point2i>& 
         ROS_ERROR("Goal is not a valid voronoi cell!");
         return false;
     }
-    
+
     std::vector<cv::Point2i> deltas = create_deltas(use_eight_neighbors);
     std::vector<cv::Point2i> closed_list;
     cv::Mat g_score(voronoi_map.size(), CV_32FC1, std::numeric_limits<float>::infinity());
@@ -328,21 +328,6 @@ bool findAStarPathOnImage(const cv::Mat& voronoi_map, std::vector<cv::Point2i>& 
                 array_open_cell_list.insert({neighbor_cell, neighbor_f_score});
                 reached_with_delta_index.at<uchar>(neighbor_cell.x, neighbor_cell.y) = i;
             }
-            /*
-            else if(neighbor_g_score < g_score.at<float>(neighbor_cell.x, neighbor_cell.y))
-            {
-                // better value found, replace
-                auto it = std::find_if(array_open_cell_list.begin(), array_open_cell_list.end(), [&](const AStarCell& e) {return e.pixel == neighbor_cell;});
-                if (it != array_open_cell_list.end()) {
-                    // std::cout << "Found" << std::endl;
-                    array_open_cell_list.erase(it);
-                    g_score.at<float>(neighbor_cell.x, neighbor_cell.y) = neighbor_g_score;
-                    array_open_cell_list.insert({neighbor_cell, neighbor_f_score});
-                    reached_with_delta_index.at<uchar>(neighbor_cell.x, neighbor_cell.y) = i;
-                }
-                // reached_with_delta_index.at<uchar>(neighbor_cell.x, neighbor_cell.y) = i;
-            }
-            */
         }
     }
     ROS_INFO("Filling gscore done");

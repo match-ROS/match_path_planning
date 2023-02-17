@@ -90,9 +90,6 @@ target_link_libraries(splined_voronoi
 )
 add_dependencies(splined_voronoi ${catkin_EXPORTED_TARGETS} ${PROJECT_NAME}_gencfg)
 
-add_executable(planning_interface src/planning_interface.cpp)
-
-target_link_libraries(planning_interface ${catkin_LIBRARIES} splined_voronoi)
 
 # ##########
 # # Build ##
