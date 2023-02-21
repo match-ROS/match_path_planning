@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 2.8.3)
 project(prm_global_planner)
 
-add_compile_options(-std=c++11)
+add_compile_options(-std=c++14)
 
 find_package(catkin REQUIRED COMPONENTS
   nav_core
@@ -23,7 +23,7 @@ include_directories(
 
 ## Declare a C++ library
 add_library(prm_global_planner
-    include/prm_global_planner/PRM_ros.h
-    src/PRM_ros.cpp
+  include/prm_global_planner/prm_planner_ros.h
+  src/prm_planner_ros.cpp
 )
 
