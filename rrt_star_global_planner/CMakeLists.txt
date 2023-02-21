@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 2.8.3)
 project(rrt_star_global_planner)
 
-add_compile_options(-std=c++11)
+add_compile_options(-std=c++14)
 
 find_package(catkin REQUIRED COMPONENTS
   nav_core
@@ -26,7 +26,8 @@ include_directories(
 #add_library(global_planner_lib src/RRTstar_ros.cpp)
 
 add_library(rrt_star_global_planner
-   src/RRTstar_ros.cpp
+  include/rrt_star_global_planner/rrt_star_planner_ros.h
+  src/rrt_star_planner_ros.cpp
 )
 
 
