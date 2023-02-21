@@ -118,7 +118,7 @@ float calcHCost(cv::Point2i current_cell, cv::Point2i target_cell, bool use_eucl
 
 float calcGCost(float current_cell_g_cost, cv::Point2i current_cell, cv::Point2i target_cell)
 {
-    return current_cell_g_cost + calcHCost(current_cell, target_cell, true);
+    return current_cell_g_cost + calcHCost(current_cell, target_cell, false);
 }
 
 float calcFCost(float current_cell_g_score, cv::Point2i current_cell, cv::Point2i target_cell, cv::Point2i goal_cell)
