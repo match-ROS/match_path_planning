@@ -1,0 +1,4 @@
+voronoi_global_planner:
+  free_cell_threshold: 0
+  free_space_factor: 4.0
+  

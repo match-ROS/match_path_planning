@@ -1,0 +1,24 @@
+<?xml version="1.0"?>
+<package format="2">
+  <name>voronoi_global_planner</name>
+  <version>0.0.0</version>
+  <description>The voronoi_global_planner package</description>
+  <maintainer email="codebase@match.uni-hannover.de">match</maintainer>
+  <license>TODO</license>
+
+  <buildtool_depend>catkin</buildtool_depend>
+  <depend>roscpp</depend>
+  <depend>rospy</depend>
+  <depend>std_msgs</depend>
+  <depend>tf</depend>
+  <depend>geometry_msgs</depend>
+  <depend>nav_core</depend>
+  <depend>libopencv-dev</depend>
+  <depend>move_base_flex</depend>
+  <depend>dynamic_reconfigure</depend>
+  <build_depend>message_generation</build_depend>
+  <exec_depend>message_runtime</exec_depend>
+  <export>
+    <nav_core plugin="${prefix}/voronoi_planner_plugin.xml" />
+  </export>
+</package>
