@@ -211,6 +211,10 @@ namespace global_planner
                         pose.header.frame_id = frame_id_;
                         pose.pose.position.x = path[i].first;
                         pose.pose.position.y = path[i].second;
+                        pose.pose.orientation.x = 0;
+                        pose.pose.orientation.y = 0;
+                        pose.pose.orientation.z = 0;
+                        pose.pose.orientation.w = 1;
                         plan.push_back(pose);
                     }
                     plan.push_back(goal);
