@@ -57,6 +57,7 @@ void SplinedVoronoiPlanner::initialize(std::string name, costmap_2d::Costmap2DRO
         private_nh.param("free_space_factor", this->free_space_factor_, 4.0);
         private_nh.param("optimize_lengths", optimize_lengths_, false);
         private_nh.param("perform_splining", this->perform_splining_, true);
+        private_nh.param("fast_mode", this->fast_mode_, false);
         ROS_INFO_STREAM("Load param free_cell_threshold: " << free_cell_threshold_);
         ROS_INFO_STREAM("Load param angle_threshold: " << angle_threshold_);
         ROS_INFO_STREAM("Load param min_distance_control_points: " << min_distance_control_points_m_);
@@ -142,6 +143,7 @@ void SplinedVoronoiPlanner::reconfigureCB(splined_voronoi::SplinedVoronoiPlanner
     this->max_optimization_time_ = config.max_optimization_time;
     this->free_space_factor_ = config.free_space_factor;
     this->perform_splining_ = config.perform_splining;
+    this->fast_mode_ = config.fast_mode;
     ROS_INFO_STREAM("Max curvature is now: " << this->max_curvature_);
 }
 
@@ -326,6 +328,11 @@ bool SplinedVoronoiPlanner::makePlan(const geometry_msgs::PoseStamped& start, co
     {
         ROS_WARN("No obstacles found in costmap, skipping voronoi generation.");
         this->voronoi_img_ = cv::Mat(this->costmap_size_x_, this->costmap_size_y_, CV_8UC1, cv::Scalar(255));
+    }
+    // check if voronoi img already exists
+    else if (fast_mode_ && this->voronoi_img_.rows == this->costmap_size_x_ && this->voronoi_img_.cols == this->costmap_size_y_)
+    {
+        ROS_WARN("Voronoi img already exists, skipping voronoi generation.");
     }
     else
     {

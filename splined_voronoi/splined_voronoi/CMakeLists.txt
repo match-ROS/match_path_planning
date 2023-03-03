@@ -86,7 +86,7 @@ target_link_libraries(splined_voronoi
   # ${TINYSPLINECXX_LIBRARIES}
   ${NLOPT_LIBRARIES}
 )
-add_dependencies(splined_voronoi ${catkin_EXPORTED_TARGETS} ${PROJECT_NAME}_gencfg)
+add_dependencies(splined_voronoi splined_voronoi_generate_messages_cpp ${catkin_EXPORTED_TARGETS} ${PROJECT_NAME}_gencfg)
 
 
 # ##########
