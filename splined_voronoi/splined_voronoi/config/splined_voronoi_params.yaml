@@ -12,7 +12,7 @@ SplinedVoronoiPlanner:
   free_space_factor: 4.0
   optimize_lengths: true
   max_optimization_time: 4.0
-  perform_splining: false
+  perform_splining: true
 
   formation_config:
     robot_names: ["/mir1", "/mir2"]

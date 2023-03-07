@@ -33,8 +33,8 @@ int findDijkstraPathToVoronoi(const cv::Mat& obstacle_map, const cv::Mat& vorono
     int movement_cost = 1;  // doesnt matter in which direction or angle, one cell movement costs 1
 
     // vector of open cells (for possible expansion) nodes
-    std::vector<std::tuple<float, int, int>> open_cells;
-    open_cells.push_back(std::make_tuple(g, start.x, start.y));
+    std::multiset<AStarCell, std::less<AStarCell>> array_open_cell_list;
+    array_open_cell_list.insert({ start, g});
 
     // path found flag
     bool found_goal = false;
@@ -43,19 +43,15 @@ int findDijkstraPathToVoronoi(const cv::Mat& obstacle_map, const cv::Mat& vorono
 
     while (!found_goal && !resign)
     {
-        if (open_cells.size() == 0)
+        if (array_open_cell_list.size() == 0)
         {
             return PlanningStatus::Failed;
         }
-        // sort open by cost
-        std::sort(open_cells.begin(), open_cells.end());
-        std::reverse(open_cells.begin(), open_cells.end());
         // get node with lowest cost
-        std::tuple<float, int, int> next = open_cells[open_cells.size() - 1];
-        open_cells.pop_back();
-        g = std::get<0>(next);
-        int curr_cell_x = std::get<1>(next);
-        int curr_cell_y = std::get<2>(next);
+        int curr_cell_x = array_open_cell_list.begin()->pixel.x;
+        int curr_cell_y = array_open_cell_list.begin()->pixel.y;
+        g = array_open_cell_list.begin()->f_cost;
+        array_open_cell_list.erase(array_open_cell_list.begin());
 
         // check, whether the solution is found (we are at the goal)
         // we stop, when get path to any voronoi cell
@@ -93,7 +89,7 @@ int findDijkstraPathToVoronoi(const cv::Mat& obstacle_map, const cv::Mat& vorono
                 }
 
                 float g2 = g + l2_cost; // movement_cost
-                open_cells.push_back(std::make_tuple(g2, x2, y2));
+                array_open_cell_list.insert({ cv::Point2i(x2, y2), g2 });
                 visited.at<uchar>(x2, y2) = 255;
             }
         }
@@ -121,9 +117,9 @@ float calcGCost(float current_cell_g_cost, cv::Point2i current_cell, cv::Point2i
     return current_cell_g_cost + calcHCost(current_cell, target_cell, true);
 }
 
-float calcFCost(float current_cell_g_score, cv::Point2i current_cell, cv::Point2i target_cell, cv::Point2i goal_cell)
+float calcFCost(float current_cell_g_score, cv::Point2i current_cell, cv::Point2i target_cell, cv::Point2i goal_cell, bool use_euclidean = true)
 {
-    return calcGCost(current_cell_g_score, current_cell, target_cell) + calcHCost(target_cell, goal_cell, false);
+    return calcGCost(current_cell_g_score, current_cell, target_cell) + calcHCost(target_cell, goal_cell, use_euclidean);
 }
 
 bool findRelaxedAStarPathOnImage(const cv::Mat& voronoi_map, std::vector<cv::Point2i>& out_path, cv::Point2i start,
@@ -151,15 +147,17 @@ bool findRelaxedAStarPathOnImage(const cv::Mat& voronoi_map, std::vector<cv::Poi
     // fill gscore array with AStar
     std::multiset<AStarCell, std::less<AStarCell>> array_open_cell_list;
     array_open_cell_list.insert({ start, calcHCost(start, goal, false) });
+
     ROS_DEBUG("Creating g score array");
     int loop_counter = 0;
 
     bool timeout = false;
-    double max_runtime = 1.0;
+    double max_runtime = 4.0;
     std::chrono::steady_clock::time_point start_time = std::chrono::steady_clock::now();
-    while (!array_open_cell_list.empty() && g_score.at<float>(goal.x, goal.y) == std::numeric_limits<float>::infinity() && !timeout)
+    while (!array_open_cell_list.empty() && g_score.at<float>(goal.x, goal.y) == std::numeric_limits<float>::infinity()) //  && !timeout
     {
         loop_counter++;
+
         // Get cell with lowest f_score and remove it so it will not be visited again
         cv::Point2i current_cell = array_open_cell_list.begin()->pixel;
         array_open_cell_list.erase(array_open_cell_list.begin());
@@ -179,6 +177,8 @@ bool findRelaxedAStarPathOnImage(const cv::Mat& voronoi_map, std::vector<cv::Poi
             {
                 continue;
             }
+            float neighbor_g_score = calcGCost(current_gscore, current_cell, neighbor_cell);
+            // if (neighbor_g_score < g_score.at<float>(neighbor_cell.x, neighbor_cell.y))
             if (g_score.at<float>(neighbor_cell.x, neighbor_cell.y) == std::numeric_limits<float>::infinity())
             {
                 g_score.at<float>(neighbor_cell.x, neighbor_cell.y) = calcGCost(current_gscore, current_cell, neighbor_cell);
@@ -243,6 +243,130 @@ bool findRelaxedAStarPathOnImage(const cv::Mat& voronoi_map, std::vector<cv::Poi
     ROS_DEBUG("reversing path");
     std::reverse(out_path.begin(), out_path.end());
     ROS_DEBUG("Done");
+    return true;
+}
+
+
+bool findAStarPathOnImage(const cv::Mat& voronoi_map, std::vector<cv::Point2i>& out_path, cv::Point2i start,
+                          cv::Point2i goal, bool use_eight_neighbors)
+{
+    bool start_is_voronoi = voronoi_map.at<uchar>(start.x, start.y) == 255;
+    if (!start_is_voronoi)
+    {
+        ROS_ERROR("Start is not a valid voronoi cell!");
+        return false;
+    }
+    bool goal_is_voronoi = voronoi_map.at<uchar>(goal.x, goal.y) == 255;
+    if (!goal_is_voronoi)
+    {
+        ROS_ERROR("Goal is not a valid voronoi cell!");
+        return false;
+    }
+
+    std::vector<cv::Point2i> deltas = create_deltas(use_eight_neighbors);
+    std::vector<cv::Point2i> closed_list;
+    cv::Mat g_score(voronoi_map.size(), CV_32FC1, std::numeric_limits<float>::infinity());
+    g_score.at<float>(start.x, start.y) = 0;
+    cv::Mat reached_with_delta_index(voronoi_map.size(), CV_8UC1, cv::Scalar(255));
+    cv::Mat visited(voronoi_map.size(), CV_8UC1, cv::Scalar(0));
+    visited.at<uchar>(start.x, start.y) = 255;
+    // vector of open cells (for possible expansion) nodes
+    std::multiset<AStarCell, std::less<AStarCell>> array_open_cell_list;
+    array_open_cell_list.insert({ start, calcHCost(start, goal, true) });
+
+    // path found flag
+    bool found_goal = false;
+    std::chrono::steady_clock::time_point begin = std::chrono::steady_clock::now();
+    while (!found_goal)
+    {
+        if (array_open_cell_list.size() == 0)
+        {
+            ROS_ERROR("No connection on voronoi found");
+            return false;
+        }
+        // get node with lowest cost
+        cv::Point2i current_cell = array_open_cell_list.begin()->pixel;
+        array_open_cell_list.erase(array_open_cell_list.begin());
+        float current_gscore = g_score.at<float>(current_cell.x, current_cell.y);
+        // ROS_INFO_STREAM("len of open cells: " << array_open_cell_list.size());
+        closed_list.push_back(current_cell);
+        visited.at<uchar>(current_cell.x, current_cell.y) = 255;
+
+        if (current_cell.x == goal.x && current_cell.y == goal.y)
+        {
+            ROS_INFO("Found goal with A*");
+            found_goal = true;
+            break;
+        }
+
+        for (int i = 0; i < deltas.size(); i++)
+        {
+            cv::Point2i neighbor_cell = current_cell + deltas[i];
+            /*
+            if (std::find(closed_list.begin(), closed_list.end(), neighbor_cell) != closed_list.end())
+            {
+                continue;
+            }
+            */
+            bool is_inside_img = neighbor_cell.x >= 0 && neighbor_cell.x < voronoi_map.rows && neighbor_cell.y >= 0 &&
+                                 neighbor_cell.y < voronoi_map.cols;
+            if (!is_inside_img)
+            {
+                continue;
+            }
+            bool is_free = voronoi_map.at<uchar>(neighbor_cell.x, neighbor_cell.y) == 255;
+            if (!is_free)
+            {
+                continue;
+            }
+            float neighbor_g_score = calcGCost(current_gscore, current_cell, neighbor_cell);
+            float neighbor_f_score = calcFCost(current_gscore, current_cell, neighbor_cell, goal, true);
+            // std::tuple<float, int, int> neighbor_tuple = {neighbor_f_score, neighbor_cell.x, neighbor_cell.y};
+            if (g_score.at<float>(neighbor_cell.x, neighbor_cell.y) == std::numeric_limits<float>::infinity() || neighbor_g_score < g_score.at<float>(neighbor_cell.x, neighbor_cell.y))
+            {
+                g_score.at<float>(neighbor_cell.x, neighbor_cell.y) = neighbor_g_score;
+                array_open_cell_list.insert({neighbor_cell, neighbor_f_score});
+                reached_with_delta_index.at<uchar>(neighbor_cell.x, neighbor_cell.y) = i;
+            }
+        }
+    }
+    ROS_INFO("Filling gscore done");
+    std::chrono::steady_clock::time_point gscore_done = std::chrono::steady_clock::now();
+    double gscore_duration = (std::chrono::duration_cast<std::chrono::microseconds>(gscore_done - begin).count()) / 1000000.0;
+    ROS_INFO_STREAM("Iteration took (s): " << gscore_duration);
+    ROS_INFO("Trace back path");
+    out_path.clear();
+    out_path.push_back(goal);
+    cv::Point2i current_cell = goal;
+    while (!((current_cell.x == start.x) && (current_cell.y == start.y)))
+    {
+        cv::Point2i min_g_score_cell = current_cell;
+        ROS_DEBUG_STREAM("Current cell: " << current_cell);
+        for (auto delta : deltas)
+        {
+            cv::Point2i neighbor_cell = current_cell + delta;
+            ROS_DEBUG_STREAM("Neighbor cell: " << neighbor_cell);
+            bool is_inside_img = neighbor_cell.x >= 0 && neighbor_cell.x < voronoi_map.rows && neighbor_cell.y >= 0 &&
+                                 neighbor_cell.y < voronoi_map.cols;
+            if (!is_inside_img)
+            {
+                ROS_DEBUG("Skipped cos not within map");
+                continue;
+            }
+            bool is_free = voronoi_map.at<uchar>(neighbor_cell.x, neighbor_cell.y) == 255;
+            if (!is_free)
+            {
+                ROS_DEBUG("Skipped cos not on voronoi");
+                continue;
+            }
+            if (g_score.at<float>(min_g_score_cell.x, min_g_score_cell.y) > g_score.at<float>(neighbor_cell.x, neighbor_cell.y))
+            {
+                min_g_score_cell = neighbor_cell;
+            }
+        }
+        out_path.push_back(min_g_score_cell);
+        current_cell = min_g_score_cell;
+    }
     return true;
 }
 
@@ -324,6 +448,8 @@ bool findCompletePath(const cv::Mat& obstacle_img, const cv::Mat& voronoi_img, s
         ROS_ERROR("Failed to find path on voronoi");
         return false;
     }
+    // path.emplace(path.begin(), start);
+    // path.push_back(goal);
     return true;
 }
 
@@ -436,7 +562,8 @@ bool isPlanFree(std::shared_ptr<costmap_2d::Costmap2D> costmap, int free_cell_th
         worldToMap(cv::Point2d(pose.pose.position.x, pose.pose.position.y), point_map, map_origin, map_size_x,
                    map_size_y, map_resolution);
 
-        if (costmap->getCost(point_map.x, point_map.y) > free_cell_threshold && costmap->getCost(point_map.x, point_map.y) != 255)
+        double cell_cost = costmap->getCost(point_map.x, point_map.y);
+        if (cell_cost > free_cell_threshold && cell_cost < 255)
         {
             ROS_WARN_STREAM("Plan is not free at " << point_map.x << ", " << point_map.y);
             return false;
