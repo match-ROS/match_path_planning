@@ -63,3 +63,12 @@ Download and build https://github.com/match-ROS/match_mobile_robotics
     cd match_mobile_robotics
     ./setup.sh
 ```
+Source your worksspace and run the example launch file.
+
+```
+    cd ../..
+    source devel/setup.bash
+    roslaunch mir_examples formation_path_planning.launch 
+```
+
+
