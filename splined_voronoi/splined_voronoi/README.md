@@ -53,3 +53,22 @@ Performs:
     - example_name:
         - rel_x_offset: relative offset in x direction
         - rel_y_offset: relative offset in y direction
+
+## How to test
+
+Download and build https://github.com/match-ROS/match_mobile_robotics
+
+```
+    git clone https://github.com/match-ROS/match_mobile_robotics
+    cd match_mobile_robotics
+    ./setup.sh
+```
+Source your worksspace and run the example launch file.
+
+```
+    cd ../..
+    source devel/setup.bash
+    roslaunch mir_examples formation_path_planning.launch 
+```
+
+
