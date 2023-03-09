@@ -58,7 +58,8 @@ Performs:
 
 Download and build https://github.com/match-ROS/match_mobile_robotics
 
-```git clone https://github.com/match-ROS/match_mobile_robotics
+```
+    git clone https://github.com/match-ROS/match_mobile_robotics
     cd match_mobile_robotics
     ./setup.sh
 ```
