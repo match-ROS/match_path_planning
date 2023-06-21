@@ -417,6 +417,8 @@ bool SplinedVoronoiPlanner::makePlan(const geometry_msgs::PoseStamped& start, co
         {
             plan.push_back(pose);
         }
+        // publish plan for visualization
+        this->publishPlan(plan, this->plan_pub_);
         return true;
     }
 
@@ -447,6 +449,10 @@ bool SplinedVoronoiPlanner::makePlan(const geometry_msgs::PoseStamped& start, co
     path_planning::createPlanFromPath(spline_samples_initial, spline_plan_initial, this->costmap_global_frame_);
     this->publishPlan(spline_plan_initial, this->spline_plan_initial_pub_);
 
+    std::chrono::steady_clock::time_point splining_time = std::chrono::steady_clock::now();
+    double splining_duration = (std::chrono::duration_cast<std::chrono::microseconds>(splining_time - plan_creating_time).count()) / 1000000.0;
+    ROS_INFO_STREAM("SplinedVoronoiPlanner: Time taken to create spline samples (s): " << splining_duration);
+
     // build spline from waypoints and optimize to fulfil curvature limit
     std::vector<cv::Point2d> continuous_path;
     std::vector<cv::Point2d> optimized_sparse_path;
@@ -472,9 +478,9 @@ bool SplinedVoronoiPlanner::makePlan(const geometry_msgs::PoseStamped& start, co
 
     std::vector<geometry_msgs::PoseStamped> splined_plan;
     path_planning::createPlanFromPath(continuous_path, splined_plan, this->costmap_global_frame_);
-    std::chrono::steady_clock::time_point splining_time = std::chrono::steady_clock::now();
-    double splining_duration = (std::chrono::duration_cast<std::chrono::milliseconds>(splining_time - plan_creating_time).count()) / 1000.0;
-    ROS_INFO_STREAM("SplinedVoronoiPlanner: Time taken for building splined plan (s): " << splining_duration);
+    // std::chrono::steady_clock::time_point splining_time = std::chrono::steady_clock::now();
+    // double splining_duration = (std::chrono::duration_cast<std::chrono::milliseconds>(splining_time - plan_creating_time).count()) / 1000.0;
+    // ROS_INFO_STREAM("SplinedVoronoiPlanner: Time taken for building splined plan (s): " << splining_duration);
 
     if (!path_planning::isPlanFree(costmap_, free_cell_threshold_, splined_plan))
     {
